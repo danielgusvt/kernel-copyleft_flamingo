@@ -2708,6 +2708,18 @@ static irqreturn_t smsm_irq_handler(int irq, void *data)
 				flush_cache_all();
 				outer_flush_all();
 			}
+// [All][Main][Ramdump][DMS][34161][akenhsu] Add /proc/last_amss log to store F3 trace log of MODEM while MODEM was crashed. 20140224 BEGIN
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+  || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+  || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+  || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+			{
+				extern void last_radio_log_write(void);
+				pr_err("\nSMSM: Write F3 trace log of modem.");
+				last_radio_log_write();
+			}
+#endif
+// [All][Main][Ramdump][DMS][34161][akenhsu] END
 			modem_queue_start_reset_notify();
 
 		} else if (modm & SMSM_INIT) {

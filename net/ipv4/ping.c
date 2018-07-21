@@ -248,33 +248,50 @@ int ping_init_sock(struct sock *sk)
 	struct net *net = sock_net(sk);
 	gid_t group = current_egid();
 	gid_t range[2];
+	
+	//# << 2014/06/19-39825-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635614 Security Incident SSIMS00000355
+	//struct group_info *group_info = get_current_groups();
+	//int i, j, count = group_info->ngroups;
 	struct group_info *group_info;
-	int i, j, count  ;
-        int ret = 0;
+	int i, j, count;
+	int ret = 0;
+    //# >> 2014/06/19-39825-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635614 Security Incident SSIMS00000355
 
 	inet_get_ping_group_range_net(net, range, range+1);
 	if (range[0] <= group && group <= range[1])
 		return 0;
 
+	//# << 2014/06/19-39825-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635614 Security Incident SSIMS00000355
 	group_info = get_current_groups();
 	count = group_info->ngroups;
+	//# >> 2014/06/19-39825-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635614 Security Incident SSIMS00000355
+
 	for (i = 0; i < group_info->nblocks; i++) {
 		int cp_count = min_t(int, NGROUPS_PER_BLOCK, count);
 
 		for (j = 0; j < cp_count; j++) {
 			group = group_info->blocks[i][j];
 			if (range[0] <= group && group <= range[1])
+
+            	//# << 2014/06/19-39825-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635614 Security Incident SSIMS00000355
+				//return 0;
 				goto out_release_group;
+				//# >> 2014/06/19-39825-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635614 Security Incident SSIMS00000355
+
 		}
 
 		count -= cp_count;
 	}
 
+//# << 2014/06/19-39825-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635614 Security Incident SSIMS00000355
+	//return -EACCES;
 	ret = -EACCES;
 
 out_release_group:
 	put_group_info(group_info);
 	return ret;
+//# >> 2014/06/19-39825-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635614 Security Incident SSIMS00000355
+	
 }
 EXPORT_SYMBOL_GPL(ping_init_sock);
 

@@ -289,6 +289,7 @@ obj-$(CONFIG_ARCH_MSM9625) += clock-local2.o clock-pll.o clock-9625.o clock-rpm.
 obj-$(CONFIG_ARCH_MPQ8092) += board-8092.o board-8092-gpiomux.o
 obj-$(CONFIG_ARCH_MPQ8092) += clock-8092.o
 obj-$(CONFIG_ARCH_MSM8226) += board-8226.o board-8226-gpiomux.o
+obj-$(CONFIG_ARCH_MSM8226) += board-8226-console.o
 obj-$(CONFIG_ARCH_MSM8226) += clock-local2.o clock-pll.o clock-8226.o clock-rpm.o clock-voter.o clock-mdss-8974.o
 obj-$(CONFIG_ARCH_MSM8226) += acpuclock-8226.o acpuclock-cortex.o
 obj-$(CONFIG_ARCH_MSM8610) += board-8610.o board-8610-gpiomux.o
@@ -368,6 +369,18 @@ obj-$(CONFIG_BT_MSM_PINTEST)  += btpintest.o
 obj-$(CONFIG_MSM_FAKE_BATTERY) += fish_battery.o
 obj-$(CONFIG_MSM_RPC_VIBRATOR) += msm_vibrator.o
 obj-$(CONFIG_MSM_NATIVE_RESTART) += restart.o
+# [All][Main][Ramdump][DMS][33828][akenhsu] Add restart_parameters for Linux and SBL1 20140214 BEGIN
+obj-$(CONFIG_MSM_NATIVE_RESTART) += restart_parameters.o
+# [All][Main][Ramdump][DMS][33828][akenhsu] 20140214 END
+# [All][Main][Ramdump][DMS][33996][akenhsu] Add productinfo and ramdmpinfo in /proc folder 20140219 BEGIN
+obj-$(CONFIG_MSM_NATIVE_RESTART) += ramdump_proc_files.o
+# [All][Main][Ramdump][DMS][33996][akenhsu] 20140219 END
+# [All][Main][Ramdump][DMS][34161][akenhsu] Add /proc/last_amss log to store F3 trace log of MODEM while MODEM was crashed. 20140224 BEGIN
+obj-$(CONFIG_MSM_NATIVE_RESTART) += last_radio_log.o
+# [All][Main][Ramdump][DMS][34161][akenhsu] 20140224 END
+# [All][Main][Ramdump][DMS][34212][akenhsu] Make subsystem_ramdump write log to kernel log instead of write to stderr 20140225 BEGIN
+obj-$(CONFIG_MSM_NATIVE_RESTART) += last_ssr_kmsg.o
+# [All][Main][Ramdump][DMS][34212][akenhsu] 20140225 END
 obj-$(CONFIG_MSM_MODEM_RESTART) += restart_7k.o
 
 obj-$(CONFIG_MSM_PROC_COMM_REGULATOR) += proccomm-regulator.o
@@ -383,6 +396,9 @@ obj-$(CONFIG_MSM_RTB) += msm_rtb.o
 obj-$(CONFIG_MSM_CACHE_ERP) += cache_erp.o
 obj-$(CONFIG_MSM_EBI_ERP) += ebi_erp.o
 obj-$(CONFIG_MSM_CACHE_DUMP) += msm_cache_dump.o
+# [All][Main][power][DMS][34038][Raymond Lin] Add SONY Feature 17920 Stamina mode patch BEGIN
+obj-$(CONFIG_SONY_SSM) += sony_ssm.o
+# [All][Main][power][DMS][34038][Raymond Lin] Add SONY Feature 17920 Stamina mode patch END
 
 obj-$(CONFIG_MSM_HSIC_SYSMON) += hsic_sysmon.o
 obj-$(CONFIG_MSM_HSIC_SYSMON_TEST) += hsic_sysmon_test.o

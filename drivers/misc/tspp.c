@@ -1899,7 +1899,9 @@ int tspp_add_filter(u32 dev, u32 channel_id,
 	channel = &pdev->channels[channel_id];
 
 	if (filter->source > TSPP_SOURCE_MEM) {
-		pr_err("tspp invalid source");
+		//<2014/05/28 EricLin, Security Incident.
+		pr_err("tspp invalid filter priority");
+		//>2014/05/28 EricLin
 		return -ENOSR;
 	}
 

@@ -1354,9 +1354,15 @@ static int netlink_sendmsg(struct kiocb *kiocb, struct socket *sock,
 		dst_pid = addr->nl_pid;
 		dst_group = ffs(addr->nl_groups);
 		err =  -EPERM;
+
+		//# << 2014/06/19-39831-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05771344 Security Incident SSIMS00000356 ANDROID-14272474
+		//if (dst_group && !netlink_capable(sock, NL_NONROOT_SEND))
+		//	goto out;
 		if ((dst_group || dst_pid) &&
-		    !netlink_capable(sock, NL_NONROOT_SEND))
-			goto out;
+			!netlink_capable(sock, NL_NONROOT_SEND))
+				goto out;
+        //# >> 2014/06/19-39831-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05771344 Security Incident SSIMS00000356 ANDROID-14272474
+			
 	} else {
 		dst_pid = nlk->dst_pid;
 		dst_group = nlk->dst_group;
@@ -2130,7 +2136,10 @@ static void __init netlink_add_usersock_entry(void)
 	rcu_assign_pointer(nl_table[NETLINK_USERSOCK].listeners, listeners);
 	nl_table[NETLINK_USERSOCK].module = THIS_MODULE;
 	nl_table[NETLINK_USERSOCK].registered = 1;
+	
+    //# << 2014/06/19-39831-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05771344 Security Incident SSIMS00000356 ANDROID-14272474
 	nl_table[NETLINK_USERSOCK].nl_nonroot = NL_NONROOT_SEND;
+    //# >> 2014/06/19-39831-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05771344 Security Incident SSIMS00000356 ANDROID-14272474
 
 	netlink_table_ungrab();
 }

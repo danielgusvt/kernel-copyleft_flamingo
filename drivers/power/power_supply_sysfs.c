@@ -185,6 +185,31 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(scope),
 	POWER_SUPPLY_ATTR(system_temp_level),
 	POWER_SUPPLY_ATTR(resistance),
+/*[Arima5911][33810][bozhi_lin] For charging safety: set warm battery state and cool battery state to meet requirement 20140321 begin*/	
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+	POWER_SUPPLY_ATTR(temp_cold),
+	POWER_SUPPLY_ATTR(temp_hot),
+#endif	
+/*[Arima5911][33810][bozhi_lin] 20140321 end  */
+/*[Arima5911][34482][bozhi_lin] set VBAT_DET to 4V during call 20140321 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+	POWER_SUPPLY_ATTR(is_during_call),
+#endif
+/*[Arima5911][34482][bozhi_lin] 20140321 end  */
+/*[Arima5908][39932][bozhi_lin] add maintain prop for charging to fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+	POWER_SUPPLY_ATTR(is_maintain),
+#endif
+/*[Arima5908][39932][bozhi_lin] 20140620 end  */
 	/* Properties of type `const char *' */
 	POWER_SUPPLY_ATTR(model_name),
 	POWER_SUPPLY_ATTR(manufacturer),
@@ -310,6 +335,21 @@ int power_supply_uevent(struct device *dev, struct kobj_uevent_env *env)
 		}
 
 		dev_dbg(dev, "prop %s=%s\n", attrname, prop_buf);
+
+/*[Arima5911][34482][bozhi_lin] set VBAT_DET to 4V during call 20140321 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+		if ((env->envp_idx+1) >= UEVENT_NUM_ENVP) {
+			kfree(attrname);
+			/*[Arima5911][35098][bozhi_lin] fix off-charging will show question mark 20140320 begin*/
+			ret = 0;
+			/*[Arima5911][35098][bozhi_lin] 20140320 end  */
+			goto out;	
+		}
+#endif
+/*[Arima5911][34482][bozhi_lin] 20140321 end  */			
 
 		ret = add_uevent_var(env, "POWER_SUPPLY_%s=%s", attrname, prop_buf);
 		kfree(attrname);

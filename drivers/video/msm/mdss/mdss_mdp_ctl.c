@@ -32,6 +32,7 @@ static inline u64 fudge_factor(u64 val, u32 numer, u32 denom)
 	return result;
 }
 
+
 static inline u64 apply_fudge_factor(u64 val,
 	struct mdss_fudge_factor *factor)
 {
@@ -289,7 +290,7 @@ static u32 mdss_mdp_perf_calc_pipe_prefill_cmd(struct mdss_mdp_prefill_params
 			params->src_h, params->dst_h, params->src_w,
 			params->dst_w);
 		prefill_bytes += post_scaler_bytes;
-	}
+}
 
 	pr_debug("ot=%d bwc=%d smp=%d y_buf=%d fbc=%d\n", ot_bytes,
 		params->is_bwc, latency_buf_bytes, y_buf_bytes, fbc_cmd_bytes);
@@ -413,12 +414,14 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 	else
 		perf->prefill_bytes = 0;
 
+
 	pr_debug("mixer=%d pnum=%d clk_rate=%u bw_overlap=%llu prefill=%d\n",
 		 mixer->num, pipe->num, perf->mdp_clk_rate, perf->bw_overlap,
 		 perf->prefill_bytes);
 
 	return 0;
 }
+
 
 static inline int mdss_mdp_perf_is_overlap(u32 y00, u32 y01, u32 y10, u32 y11)
 {
@@ -466,6 +469,7 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 			v_total = mixer->height;
 		}
 
+
 		perf->mdp_clk_rate = mixer->width * v_total * fps;
 		perf->mdp_clk_rate =
 			mdss_mdp_clk_fudge_factor(mixer, perf->mdp_clk_rate);
@@ -474,6 +478,7 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 			perf->bw_overlap =
 				fps * mixer->width * mixer->height * 3;
 	}
+
 
 	memset(bw_overlap, 0, sizeof(u64) * MDSS_MDP_MAX_STAGE);
 	memset(v_region, 0, sizeof(u32) * MDSS_MDP_MAX_STAGE * 2);
@@ -493,6 +498,7 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 		if (tmp.mdp_clk_rate > max_clk_rate)
 			max_clk_rate = tmp.mdp_clk_rate;
 	}
+
 
 	/*
 	 * Sort the v_region array so the total display area can be
@@ -578,14 +584,17 @@ static u32 mdss_mdp_get_vbp_factor_max(struct mdss_mdp_ctl *ctl)
 	return vbp_max;
 }
 
+
 static void __mdss_mdp_perf_calc_ctl_helper(struct mdss_mdp_ctl *ctl,
 		struct mdss_mdp_perf_params *perf,
 		struct mdss_mdp_pipe **left_plist, int left_cnt,
 		struct mdss_mdp_pipe **right_plist, int right_cnt)
 {
+
 	struct mdss_mdp_perf_params tmp;
 
 	memset(perf, 0, sizeof(*perf));
+
 
 	if (left_cnt && ctl->mixer_left) {
 		mdss_mdp_perf_calc_mixer(ctl->mixer_left, &tmp,
@@ -753,6 +762,7 @@ static void mdss_mdp_ctl_perf_update(struct mdss_mdp_ctl *ctl,
 		mdss_mdp_bus_scale_set_quota(bus_ab_quota, bus_ib_quota);
 		pr_debug("ab=%llu ib=%llu\n", bus_ab_quota, bus_ib_quota);
 	}
+
 
 	if (update_clk) {
 		u32 clk_rate = 0;
@@ -2255,6 +2265,7 @@ int mdss_mdp_display_wait4comp(struct mdss_mdp_ctl *ctl)
 	ATRACE_BEGIN("wait_fnc");
 	if (ctl->wait_fnc)
 		ret = ctl->wait_fnc(ctl, NULL);
+
 	ATRACE_END("wait_fnc");
 
 	trace_mdp_commit(ctl);
@@ -2315,6 +2326,7 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 
 	if (mixer1_changed || mixer2_changed
 			|| ctl->force_screen_state) {
+
 		ATRACE_BEGIN("prepare_fnc");
 		if (ctl->prepare_fnc)
 			ret = ctl->prepare_fnc(ctl, arg);

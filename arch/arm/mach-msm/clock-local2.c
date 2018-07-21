@@ -389,6 +389,10 @@ static int branch_clk_enable(struct clk *c)
 	return 0;
 }
 
+// [All][Main][Stability][DMS] Add debug log for QCT analysis issue 20141106 BEGIN
+#include <linux/sched.h> 
+unsigned long long g_dbg_gpu_sche_clock_off;
+// [All][Main][Stability][DMS] 20141106 END
 static void branch_clk_disable(struct clk *c)
 {
 	unsigned long flags;
@@ -400,7 +404,13 @@ static void branch_clk_disable(struct clk *c)
 	reg_val &= ~CBCR_BRANCH_ENABLE_BIT;
 	writel_relaxed(reg_val, CBCR_REG(branch));
 	spin_unlock_irqrestore(&local_clock_reg_lock, flags);
-
+// [All][Main][Stability][DMS] Add debug log for QCT analysis issue 20141106 BEGIN
+	if(!strcmp(c->dbg_name, "oxili_gfx3d_clk")) 
+	{ 
+		// store when disable GPU clock 
+		g_dbg_gpu_sche_clock_off = sched_clock(); 
+	} 
+// [All][Main][Stability][DMS] 20141106 END
 	/* Wait for clock to disable before continuing. */
 	branch_clk_halt_check(branch->halt_check, branch->c.dbg_name,
 				CBCR_REG(branch), BRANCH_OFF);

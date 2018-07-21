@@ -307,6 +307,64 @@ static u8 kpdbl_debug_regs[] = {
 	0x40, 0x46, 0xb1, 0xb3, 0xb4, 0xe5,
 };
 
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 start */
+#define IS_USE_ARIMA_BLINK 1
+#if IS_USE_ARIMA_BLINK
+
+#define MAX_BLINK_LUT 5//2
+
+struct arima_lut_params {
+    int ramp_step_ms;
+    int lut_len;
+    int lut_table[PWM_LUT_MAX_SIZE];
+};
+
+static struct arima_lut_params g_lut_params[MAX_BLINK_LUT] = {
+	{
+		100,
+		15,
+		{ 00, 10, 20, 30, 40,
+		  50, 60, 70, 80, 90,
+		  80, 60, 40, 20, 00,
+		}
+	},
+	{
+		100,
+		30,
+		{ 00, 07, 14, 21, 28,
+		  35, 42, 49, 56, 63,
+		  70, 77, 84, 91, 98,
+		  99, 99, 99, 99, 99,
+		  90, 80, 70, 60, 50,
+		  40, 30, 20, 10, 00,
+		}
+	},
+/* [Arima5908][36997][JessicaTseng] [All][Main][LED][DMS]Fine-tune LED LPG timing 20140428 start */
+	// red LED
+	{
+		20,
+		2,
+		{ 00, 80
+		}
+	},
+	// green LED
+	{
+		20,
+		2,
+		{ 00, 20
+		}
+	},
+	// blue LED
+	{
+		20,
+		2,
+		{ 00, 20
+		}
+	},		
+/* [Arima5908][36997][JessicaTseng] [All][Main][LED][DMS]Fine-tune LED LPG timing 20140428 end */
+};
+#endif // IS_USE_ARIMA_BLINK
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 end */
 /**
  *  pwm_config_data - pwm configuration data
  *  @lut_params - lut parameters to be used by pwm driver
@@ -792,8 +850,11 @@ static int qpnp_mpp_set(struct qpnp_led_data *led)
 		}
 	}
 
-	if (led->mpp_cfg->pwm_mode != MANUAL_MODE)
-		led->mpp_cfg->pwm_cfg->blinking = false;
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 start */
+	//if (led->mpp_cfg->pwm_mode != MANUAL_MODE)
+		//led->mpp_cfg->pwm_cfg->blinking = false;
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 end */
+
 	qpnp_dump_regs(led, mpp_debug_regs, ARRAY_SIZE(mpp_debug_regs));
 
 	return 0;
@@ -1822,6 +1883,14 @@ static ssize_t pause_lo_store(struct device *dev,
 
 	pwm_free(pwm_cfg->pwm_dev);
 	pwm_cfg->lut_params.lut_pause_lo = pause_lo;
+
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 start */
+	if (pause_lo)
+		pwm_cfg->lut_params.flags |= PM_PWM_LUT_PAUSE_LO_EN;
+	else
+		pwm_cfg->lut_params.flags &= ~PM_PWM_LUT_PAUSE_LO_EN;
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 end */
+
 	ret = qpnp_pwm_init(pwm_cfg, led->spmi_dev, led->cdev.name);
 	if (ret) {
 		pwm_cfg->lut_params.lut_pause_lo = previous_pause_lo;
@@ -1874,6 +1943,14 @@ static ssize_t pause_hi_store(struct device *dev,
 
 	pwm_free(pwm_cfg->pwm_dev);
 	pwm_cfg->lut_params.lut_pause_hi = pause_hi;
+
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 start */
+	if (pause_hi)
+		pwm_cfg->lut_params.flags |= PM_PWM_LUT_PAUSE_HI_EN;
+	else
+		pwm_cfg->lut_params.flags &= ~PM_PWM_LUT_PAUSE_HI_EN; 
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 start */
+
 	ret = qpnp_pwm_init(pwm_cfg, led->spmi_dev, led->cdev.name);
 	if (ret) {
 		pwm_cfg->lut_params.lut_pause_hi = previous_pause_hi;
@@ -2131,6 +2208,87 @@ restore:
 	return ret;
 }
 
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 start */
+#if IS_USE_ARIMA_BLINK
+static int led_lut_cfg_arima(struct qpnp_led_data *led, struct pwm_config_data *pwm_cfg, int blink_mode)
+{
+	int rc = 0, i;
+
+	if (blink_mode > MAX_BLINK_LUT || blink_mode <= 0) return -EINVAL;
+	blink_mode -= 1; // blink 1 matched lut_param[0]
+	
+/* [Arima5908][33453][JessicaTseng] [All][Main][LED][DMS]Enable LED blinking function 20140127 start */
+	if(strcmp(led->cdev.name, "red") == 0)
+	 blink_mode = 2;
+	else if(strcmp(led->cdev.name, "green") == 0)
+	 blink_mode = 3;
+	else if(strcmp(led->cdev.name, "blue") == 0)
+	 blink_mode = 4;
+/* [Arima5908][33453][JessicaTseng] [All][Main][LED][DMS]Enable LED blinking function 20140127 end */
+ 	
+	pwm_cfg->duty_cycles->num_duty_pcts = g_lut_params[blink_mode].lut_len;
+	pwm_cfg->lut_params.idx_len = g_lut_params[blink_mode].lut_len;
+
+	pwm_cfg->duty_cycles->duty_ms = g_lut_params[blink_mode].ramp_step_ms;
+	pwm_cfg->lut_params.ramp_step_ms = g_lut_params[blink_mode].ramp_step_ms;
+	
+	// Reconfig look-up table
+/* [Arima5908][33548][JessicaTseng] [ALL][Main][LED][DMS]Fix re-allocation duty_pcts for LED blinking function 20140204 start */
+	if (!pwm_cfg->duty_cycles->duty_pcts) {
+		pwm_cfg->duty_cycles->duty_pcts =
+			devm_kzalloc(&led->spmi_dev->dev,
+			sizeof(int) * PWM_LUT_MAX_SIZE,
+			GFP_KERNEL);
+		if (!pwm_cfg->duty_cycles->duty_pcts) {
+			dev_err(&led->spmi_dev->dev,
+			"Unable to allocate memory\n");
+			rc = -ENOMEM;
+			goto bad_lpg_params;
+		}
+	}
+/* [Arima5908][33548][JessicaTseng] [ALL][Main][LED][DMS]Fix re-allocation duty_pcts for LED blinking function 20140204 end */
+
+	for (i = 0; i<pwm_cfg->duty_cycles->num_duty_pcts; i++) {
+		pwm_cfg->duty_cycles->duty_pcts[i] = g_lut_params[blink_mode].lut_table[i];
+	}
+
+/* [Arima5908][33453][JessicaTseng] [All][Main][LED][DMS]Enable LED blinking function 20140127 start */
+	if((blink_mode >= 2)&&(blink_mode <= 4))
+		pwm_cfg->duty_cycles->duty_pcts[i-1] = led->cdev.brightness;
+/* [Arima5908][33453][JessicaTseng] [All][Main][LED][DMS]Enable LED blinking function 20140127 end */
+ 	
+	return rc;
+bad_lpg_params:
+	return rc;
+}
+
+static void led_blink_arima(struct qpnp_led_data *led,
+			struct pwm_config_data *pwm_cfg, int blink_mode)
+{
+	led_lut_cfg_arima(led, pwm_cfg, blink_mode);
+	
+	if (pwm_cfg->use_blink) {
+		if (led->cdev.brightness) {
+			pwm_cfg->blinking = true;
+			if (led->id == QPNP_ID_LED_MPP)
+				led->mpp_cfg->pwm_mode = LPG_MODE;
+			pwm_cfg->mode = LPG_MODE;
+		} else {
+			pwm_cfg->blinking = false;
+			pwm_cfg->mode = pwm_cfg->default_mode;
+			pwm_cfg->lut_params.lut_pause_hi = 0;
+			pwm_cfg->lut_params.lut_pause_lo = 0;
+			if (led->id == QPNP_ID_LED_MPP)
+				led->mpp_cfg->pwm_mode = pwm_cfg->default_mode;
+		}
+		pwm_free(pwm_cfg->pwm_dev);
+		qpnp_pwm_init(pwm_cfg, led->spmi_dev, led->cdev.name);
+		qpnp_led_set(&led->cdev, led->cdev.brightness);
+	}
+}
+#endif // IS_USE_ARIMA_BLINK
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 end */
+
 static void led_blink(struct qpnp_led_data *led,
 			struct pwm_config_data *pwm_cfg)
 {
@@ -2143,6 +2301,10 @@ static void led_blink(struct qpnp_led_data *led,
 		} else {
 			pwm_cfg->blinking = false;
 			pwm_cfg->mode = pwm_cfg->default_mode;
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 start */
+			pwm_cfg->lut_params.lut_pause_hi = 0;
+			pwm_cfg->lut_params.lut_pause_lo = 0;
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 end */
 			if (led->id == QPNP_ID_LED_MPP)
 				led->mpp_cfg->pwm_mode = pwm_cfg->default_mode;
 		}
@@ -2165,11 +2327,32 @@ static ssize_t blink_store(struct device *dev,
 	if (ret)
 		return ret;
 	led = container_of(led_cdev, struct qpnp_led_data, cdev);
+	
+/* [Arima5908][33453][JessicaTseng] [All][Main][LED][DMS]Enable LED blinking function 20140127 start */
+#if IS_USE_ARIMA_BLINK
+	if(led->id == QPNP_ID_LED_MPP)
+	{
+	 if(blinking == 0)
+	  led->cdev.brightness = 0;
+	}
+	else
+	{
+	 led->cdev.brightness = blinking ? led->cdev.max_brightness : 0;
+	}
+#else
 	led->cdev.brightness = blinking ? led->cdev.max_brightness : 0;
+#endif	
+/* [Arima5908][33453][JessicaTseng] [All][Main][LED][DMS]Enable LED blinking function 20140127 end */
 
 	switch (led->id) {
 	case QPNP_ID_LED_MPP:
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 start */
+#if IS_USE_ARIMA_BLINK
+	    led_blink_arima(led, led->mpp_cfg->pwm_cfg, (int)blinking);
+#else
 		led_blink(led, led->mpp_cfg->pwm_cfg);
+#endif // IS_USE_ARIMA_BLINK
+/* [Arima5908][32708][JessicaTseng] [All][Main][LED][DMS]Porting R/G/B LED 20140103 end */
 		break;
 	case QPNP_ID_RGB_RED:
 	case QPNP_ID_RGB_GREEN:
@@ -3366,8 +3549,13 @@ static int __devinit qpnp_leds_probe(struct spmi_device *spmi)
 			__qpnp_led_work(led, led->cdev.brightness);
 			if (led->turn_off_delay_ms > 0)
 				qpnp_led_turn_off(led);
-		} else
+/* [Arima5908][36428][JessicaTseng] [All][Main][LED][DMS]Turn off LED when rebooting 20140417 start */
+		} else {
 			led->cdev.brightness = LED_OFF;
+			if (led->id == QPNP_ID_LED_MPP)			
+				qpnp_led_turn_off(led);
+		}
+/* [Arima5908][36428][JessicaTseng] [All][Main][LED][DMS]Turn off LED when rebooting 20140417 end */
 
 		parsed_leds++;
 	}

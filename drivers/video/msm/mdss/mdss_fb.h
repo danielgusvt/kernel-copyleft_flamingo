@@ -220,8 +220,9 @@ struct msm_fb_data_type {
 	bool shutdown_pending;
 
 	struct task_struct *splash_thread;
-	bool splash_logo_enabled;
-
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 begin */
+	bool splash_logo_enabled; 
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 end */
 	struct msm_fb_backup_type msm_fb_backup;
 	struct completion power_set_comp;
 	u32 is_power_setting;

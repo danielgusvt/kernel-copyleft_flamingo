@@ -37,6 +37,16 @@
 	qcom,cpr-up-threshold = <0>;
 	qcom,cpr-down-threshold = <5>;
 	qcom,cpr-corner-map = <1 1 2 2 3 3 3 3 3 3 3 3 3 3>;
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=94a1a72d8613cb8da6b085884f4d13973f4d3834
+//	qcom,cpr-quot-adjust-table =
+//				<1 5 450>,
+//				<1 6 375>,
+//				<1 7 300>,
+//				<1 8 225>,
+//				<1 9 187>,
+//				<1 10 150>,
+//				<1 11 75>;
 	qcom,pvs-version-fuse-sel = <22 4 2 0>;
 	qcom,cpr-corner-frequency-map =
 			<1 300000000>,
@@ -59,6 +69,7 @@
 			<2 2 2 4 10>,
 			<5 2 2 4 14>;
 	qcom,cpr-quot-adjust-scaling-factor-max = <650>;
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 };
 
 &msm_gpu {

@@ -301,6 +301,17 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_buf tx_buf;
 	struct dsi_buf rx_buf;
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+	struct regulator *vdd_io_vreg;
+	struct regulator *vdda_vreg;
+#endif	
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
 };
 
 struct dsi_status_data {

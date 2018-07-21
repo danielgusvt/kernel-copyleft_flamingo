@@ -1137,7 +1137,14 @@ static int adreno_iommu_setstate(struct kgsl_device *device,
 					uint32_t flags)
 {
 	phys_addr_t pt_val;
+	
+	//# << 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+	//unsigned int link[230];
+	//unsigned int *cmds = &link[0];
+	//int sizedwords = 0;
 	unsigned int *link = NULL, *cmds;
+	//# >> 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+	
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	int num_iommu_units;
 	struct kgsl_context *context;
@@ -1157,15 +1164,17 @@ static int adreno_iommu_setstate(struct kgsl_device *device,
 		return 0;
 	}
 	adreno_ctx = ADRENO_CONTEXT(context);
-
-	link = kmalloc(PAGE_SIZE, GFP_KERNEL);
+    
+	//# << 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+    link = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (link == NULL) {
-		result = -ENOMEM;
-		goto done;
+	    	result = -ENOMEM;
+			goto done;
 	}
-
+	
 	cmds = link;
-
+    //# << 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+	
 	result = kgsl_mmu_enable_clk(&device->mmu, KGSL_IOMMU_CONTEXT_USER);
 
 	if (result)
@@ -1185,11 +1194,25 @@ static int adreno_iommu_setstate(struct kgsl_device *device,
 		cmds += _adreno_iommu_setstate_v1(device, cmds, pt_val,
 						num_iommu_units, flags);
 
+	//# << 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+	//sizedwords += (cmds - &link[0]);
+	//if (sizedwords == 0) {
+	//	KGSL_DRV_ERR(device, "no commands generated\n");
+	//	BUG();
+	//}
+	//# >> 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+
 	/* invalidate all base pointers */
 	*cmds++ = cp_type3_packet(CP_INVALIDATE_STATE, 1);
 	*cmds++ = 0x7fff;
+	
+	//# << 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+	//sizedwords += 2;
 
+	//if (sizedwords > (ARRAY_SIZE(link))) {
 	if ((unsigned int) (cmds - link) > (PAGE_SIZE / sizeof(unsigned int))) {
+	//# >> 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+	
 		KGSL_DRV_ERR(device, "Temp command buffer overflow\n");
 		BUG();
 	}
@@ -1198,8 +1221,11 @@ static int adreno_iommu_setstate(struct kgsl_device *device,
 	 * use the global timestamp for iommu clock disablement
 	 */
 	result = adreno_ringbuffer_issuecmds(device, adreno_ctx,
+	        //# << 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+			//KGSL_CMD_FLAGS_PMODE, &link[0], sizedwords);
 			KGSL_CMD_FLAGS_PMODE, link,
 			(unsigned int)(cmds - link));
+			//# >> 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
 
 	/*
 	 * On error disable the IOMMU clock right away otherwise turn it off
@@ -1213,7 +1239,11 @@ static int adreno_iommu_setstate(struct kgsl_device *device,
 						KGSL_IOMMU_CONTEXT_USER);
 
 done:
+
+    //# << 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
 	kfree(link);
+	//# >> 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
+
 	kgsl_context_put(context);
 	return result;
 }
@@ -3156,6 +3186,11 @@ uint8_t *adreno_convertaddr(struct kgsl_device *device, phys_addr_t pt_base,
 	return memdesc ? kgsl_gpuaddr_to_vaddr(memdesc, gpuaddr) : NULL;
 }
 
+// [All][Main][Stability][DMS] Add debug log for QCT analysis issue 20141106 BEGIN
+#include <linux/sched.h> 
+unsigned long long g_dbg_gpu_last_read; 
+unsigned long long g_dbg_gpu_last_write; 
+// [All][Main][Stability][DMS] 20141106 END
 
 /**
  * adreno_read - General read function to read adreno device memory
@@ -3177,6 +3212,10 @@ static void adreno_read(struct kgsl_device *device, void *base,
 
 	if (!in_interrupt())
 		kgsl_pre_hwaccess(device);
+
+// [All][Main][Stability][DMS] Add debug log for QCT analysis issue 20141106 BEGIN
+	g_dbg_gpu_last_read = sched_clock();
+// [All][Main][Stability][DMS] 20141106 END
 
 	/*ensure this read finishes before the next one.
 	 * i.e. act like normal readl() */
@@ -3221,6 +3260,10 @@ static void adreno_regwrite(struct kgsl_device *device,
 		kgsl_pre_hwaccess(device);
 
 	kgsl_trace_regwrite(device, offsetwords, value);
+
+// [All][Main][Stability][DMS] Add debug log for QCT analysis issue 20141106 BEGIN
+	g_dbg_gpu_last_write = sched_clock();
+// [All][Main][Stability][DMS] 20141106 END
 
 	kgsl_cffdump_regwrite(device, offsetwords << 2, value);
 	reg = (unsigned int *)(device->reg_virt + (offsetwords << 2));

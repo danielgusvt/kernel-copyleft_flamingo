@@ -21,7 +21,11 @@
 #include <linux/evm.h>
 #include <linux/fsnotify.h>
 #include <net/flow.h>
-
+//<2014/04/18-36561-EricLin, [All][Main][S1][] Add RIC function.
+#if defined(CONFIG_SECURITY_SONY_RIC) && !defined(CONFIG_DEFAULT_SECURITY_SONY)
+#include "sony/ric.h"
+#endif
+//>2014/04/18-36561-EricLin
 #define MAX_LSM_EVM_XATTR	2
 
 /* Boot-time LSM user choice */
@@ -283,6 +287,15 @@ int security_sb_statfs(struct dentry *dentry)
 int security_sb_mount(char *dev_name, struct path *path,
                        char *type, unsigned long flags, void *data)
 {
+//<2014/04/18-36561-EricLin, [All][Main][S1][] Add RIC function.
+#if defined(CONFIG_SECURITY_SONY_RIC) && !defined(CONFIG_DEFAULT_SECURITY_SONY)
+	int ret;
+
+	ret = sony_ric_mount(dev_name, path, type, flags, data);
+	if (ret)
+		return ret;
+#endif
+//>2014/04/18-36561-EricLin
 	return security_ops->sb_mount(dev_name, path, type, flags, data);
 }
 

@@ -43,12 +43,18 @@ else
 	TIMESTAMP=$KBUILD_BUILD_TIMESTAMP
 fi
 if test -z "$KBUILD_BUILD_USER"; then
-	LINUX_COMPILE_BY=$(whoami | sed 's/\\/\\\\/')
+# [All][Main][SI][DMS][44408][akenhsu] Fix the builder and build machine avoiding 'arima' in kernel version 20140926 BEGIN
+#	LINUX_COMPILE_BY=$(whoami | sed 's/\\/\\\\/')
+	LINUX_COMPILE_BY=`echo build_admin`
+# [All][Main][SI][DMS][44408][akenhsu] 20140926 END
 else
 	LINUX_COMPILE_BY=$KBUILD_BUILD_USER
 fi
 if test -z "$KBUILD_BUILD_HOST"; then
-	LINUX_COMPILE_HOST=`hostname`
+# [All][Main][SI][DMS][44408][akenhsu] Fix the builder and build machine avoiding 'arima' in kernel version 20140926 BEGIN
+#	LINUX_COMPILE_HOST=`hostname`
+	LINUX_COMPILE_HOST=`echo ubuntu_builder`
+# [All][Main][SI][DMS][44408][akenhsu] 20140926 END
 else
 	LINUX_COMPILE_HOST=$KBUILD_BUILD_HOST
 fi

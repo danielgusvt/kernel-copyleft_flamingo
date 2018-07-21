@@ -58,6 +58,11 @@
 #define PORTSC_PTS_ULPI         (3 << 30)
 #define PORTSC_LS               (3 << 10)
 #define PORTSC_LS_DM            (1 << 10)
+// [All][Main][Stability][DMS06176102][47114][akenhsu] Add QCT Patch of USB in case#01889416 20150130 BEGIN
+// https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/patch/drivers/usb/gadget/ci13xxx_udc.h?id=6a70ad8cfe09e62352e9b78e7bfd7b160fce775f
+#define PORTSC_SUSP_MASK        (1 << 7)  /* Port Suspend */
+#define PORTSC_FPR_MASK         (1 << 6)
+// [All][Main][Stability][DMS06176102][47114][akenhsu] 20150130 END
 #define PORTSC_CSC              (1 << 1)
 #define PORTSC_CCS              (1 << 0)
 

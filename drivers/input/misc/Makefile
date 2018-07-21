@@ -66,3 +66,8 @@ obj-$(CONFIG_BMP18X_I2C)		+= bmp18x-i2c.o
 obj-$(CONFIG_SENSORS_MMA8X5X)	  	+= mma8x5x.o
 obj-$(CONFIG_SENSORS_STK3X1X)		+= stk3x1x.o
 obj-$(CONFIG_SENSORS_CAPELLA_CM36283)	+= cm36283.o
+# [All][Main][Key][DMS][33317][akenhsu] Long press power key for 30s to crash android system 20140123 BEGIN
+ifneq (,$(filter userdebug eng,$(TARGET_BUILD_VARIANT)))
+obj-$(CONFIG_INPUT_FORCE_CRASH)		+= force_crash.o
+endif
+# [All][Main][Key][DMS][33317][akenhsu] 20140123 END

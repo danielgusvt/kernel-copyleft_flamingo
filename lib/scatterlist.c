@@ -287,8 +287,10 @@ int __sg_alloc_table(struct sg_table *table, unsigned int nents,
 		 * table pointer into the allocator and let that clear these
 		 * flags
 		 */
-		gfp_mask &= ~__GFP_WAIT;
-		gfp_mask |= __GFP_HIGH;
+		//<2014/05/13-37826-angleluo, [B][All][main][FIFA][QCTid01546617]fix oom crash issue
+		//gfp_mask &= ~__GFP_WAIT;
+		//gfp_mask |= __GFP_HIGH;
+		//>2014/05/13-37826-angleluo, [B][All][main][FIFA][QCTid01546617]fix oom crash issue
 		prv = sg;
 	} while (left);
 

@@ -39,6 +39,14 @@
 #include <mach/socinfo.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
+// [All][Main][Ramdump][DMS][34138][akenhsu] Set /proc/crash_status = 1 when subsystem crash 20140221 BEGIN
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+#include <mach/restart.h>
+#endif // Arima Define
+// [All][Main][Ramdump][DMS][34138][akenhsu]  20140221 END
 
 #include "smd_private.h"
 
@@ -163,6 +171,11 @@ struct subsys_device {
 	char miscdevice_name[32];
 	struct completion err_ready;
 	bool crashed;
+// [All][Main][Ramdump][DMS][34268][akenhsu] broadcast subsystem restart intent 20140226 BEGIN
+#if CONFIG_BSP_HW_SKU_ALL
+	int restart_count;
+#endif // CONFIG_BSP_HW_SKU_ALL
+// [All][Main][Ramdump][DMS][34268][akenhsu] 20140226 END
 };
 
 static struct subsys_device *to_subsys(struct device *d)
@@ -244,10 +257,60 @@ void subsys_default_online(struct subsys_device *dev)
 }
 EXPORT_SYMBOL(subsys_default_online);
 
+// [All][Main][Ramdump][DMS][34268][akenhsu] broadcast subsystem restart intent 20140226 BEGIN
+#if CONFIG_BSP_HW_SKU_ALL
+static ssize_t
+restart_count_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int count = to_subsys(dev)->restart_count;
+	return snprintf(buf, PAGE_SIZE, "%d\n", count);
+}
+
+static ssize_t
+debug_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int count = to_subsys(dev)->count;
+	return snprintf(buf, PAGE_SIZE, "%d\n", count);
+}
+
+static ssize_t debug_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct subsys_device *subsys = to_subsys(dev);
+	const char *p;
+
+	p = memchr(buf, '\n', count);
+	if (p)
+		count = p - buf;
+
+	if (!strncasecmp(buf, "restart", count)) {
+		pr_err("%s subsystem failure reason: force subsystem restart", subsys->desc->name);
+		if (subsystem_restart_dev(subsys))
+			return -EIO;
+	} else if (!strncasecmp(buf, "get", count)) {
+		if (subsystem_get(subsys->desc->name))
+			return -EIO;
+	} else if (!strncasecmp(buf, "put", count)) {
+		subsystem_put(subsys);
+	} else {
+		return -EINVAL;
+	}
+
+	return count;
+}
+#endif // CONFIG_BSP_HW_SKU_ALL
+// [All][Main][Ramdump][DMS][34268][akenhsu] 20140226 END
+
 static struct device_attribute subsys_attrs[] = {
 	__ATTR_RO(name),
 	__ATTR_RO(state),
 	__ATTR(restart_level, 0644, restart_level_show, restart_level_store),
+// [All][Main][Ramdump][DMS][34268][akenhsu] broadcast subsystem restart intent 20140226 BEGIN
+#if CONFIG_BSP_HW_SKU_ALL
+	__ATTR(restart_count, 0444, restart_count_show, NULL),
+	__ATTR(debug, 0644, debug_show, debug_store),
+#endif // CONFIG_BSP_HW_SKU_ALL
+// [All][Main][Ramdump][DMS][34268][akenhsu] 20140226 END
 	__ATTR_NULL,
 };
 
@@ -685,6 +748,14 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 			desc->name);
 	notify_each_subsys_device(list, count, SUBSYS_BEFORE_SHUTDOWN, NULL);
 	for_each_subsys_device(list, count, NULL, subsystem_shutdown);
+// [All][Main][Ramdump][DMS][34212][akenhsu] Make subsystem_ramdump write log to kernel log instead of write to stderr 20140225 BEGIN
+#if CONFIG_BSP_HW_SKU_ALL
+	{
+		extern void last_ssr_kmsg_write(void);
+		last_ssr_kmsg_write();
+	}
+#endif // CONFIG_BSP_HW_SKU_ALL
+// [All][Main][Ramdump][DMS][34212][akenhsu] 20140225 END
 	notify_each_subsys_device(list, count, SUBSYS_AFTER_SHUTDOWN, NULL);
 
 	notify_each_subsys_device(list, count, SUBSYS_RAMDUMP_NOTIFICATION,
@@ -711,6 +782,21 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	track->p_state = SUBSYS_NORMAL;
 	wake_unlock(&dev->wake_lock);
 	spin_unlock_irqrestore(&track->s_lock, flags);
+
+// [All][Main][Ramdump][DMS][34268][akenhsu] broadcast subsystem restart intent 20140226 BEGIN
+#if CONFIG_BSP_HW_SKU_ALL
+	{
+		// SUBSYS_UEVENT_NAME = "SUBSYS_NAME=" + SUBSYS_NAME + "\0"
+		#define SUBSYS_UEVENT_NAME_MAX_LENGTH (SUBSYS_NAME_MAX_LENGTH+13)
+		char uevent_param_name[SUBSYS_UEVENT_NAME_MAX_LENGTH];
+		char *uevent_env_restart[3] = {uevent_param_name, "SUBSYS_EVENT=RESTART", NULL};
+
+		memset(uevent_param_name, 0, SUBSYS_UEVENT_NAME_MAX_LENGTH);
+		snprintf(uevent_param_name, SUBSYS_UEVENT_NAME_MAX_LENGTH, "SUBSYS_NAME=%s", dev->desc->name);
+		kobject_uevent_env(&dev->dev.kobj, KOBJ_CHANGE, uevent_env_restart);
+	}
+#endif // CONFIG_BSP_HW_SKU_ALL
+// [All][Main][Ramdump][DMS][34268][akenhsu] 20140226 END
 }
 
 static void __subsystem_restart_dev(struct subsys_device *dev)
@@ -773,7 +859,28 @@ int subsystem_restart_dev(struct subsys_device *dev)
 	switch (dev->restart_level) {
 
 	case RESET_SUBSYS_COUPLED:
+// [All][Main][Ramdump][DMS][34212][akenhsu] Make subsystem_ramdump write log to kernel log instead of write to stderr 20140225 BEGIN
+#if CONFIG_BSP_HW_SKU_ALL
+		// Add subsystem restart message to kmsg for subsystem_ramdump parse ramdumpinfo
+		pr_err("subsys-restart: Resetting the SoC - %s crashed.", name);
+#endif // CONFIG_BSP_HW_SKU_ALL
+// [All][Main][Ramdump][DMS][34212][akenhsu] 20140225 END
+
 		__subsystem_restart_dev(dev);
+// [All][Main][Ramdump][DMS][34138][akenhsu] Set /proc/crash_status = 1 when subsystem crash 20140221 BEGIN
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+		msm_set_crash_status(1);
+#endif // Arima Define
+// [All][Main][Ramdump][DMS][34138][akenhsu]  20140221 END
+
+// [All][Main][Ramdump][DMS][34268][akenhsu] broadcast subsystem restart intent 20140226 BEGIN
+#if CONFIG_BSP_HW_SKU_ALL
+		dev->restart_count++;
+#endif // CONFIG_BSP_HW_SKU_ALL
+// [All][Main][Ramdump][DMS][34268][akenhsu] 20140226 END
 		break;
 	case RESET_SOC:
 		panic("subsys-restart: Resetting the SoC - %s crashed.", name);

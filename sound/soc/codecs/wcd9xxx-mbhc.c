@@ -80,11 +80,19 @@
 #define MCLK_RATE_12288KHZ 12288000
 #define MCLK_RATE_9600KHZ 9600000
 
+/* --- [ALL][Main][Audio][DMS][5378512][LewisChen] Fix no response when pressing hook key . 20140605 begin --- */
+#if CONFIG_BSP_HW_SKU_ALL
+#define DEFAULT_DCE_STA_WAIT 70
+#else
 #define DEFAULT_DCE_STA_WAIT 55
+#endif
+/* --- [ALL][Main][Audio][DMS][5378512][LewisChen] 20140605 end   --- */
 #define DEFAULT_DCE_WAIT 60000
 #define DEFAULT_STA_WAIT 5000
 
+
 #define VDDIO_MICBIAS_MV 1800
+
 
 #define WCD9XXX_MICBIAS_PULLDOWN_SETTLE_US 5000
 
@@ -1333,6 +1341,7 @@ wcd9xxx_cs_find_plug_type(struct wcd9xxx_mbhc *mbhc,
 	    WCD9XXX_MBHC_CAL_PLUG_TYPE_PTR(mbhc->mbhc_cfg->calibration);
 	s16 hs_max, no_mic, dce_z;
 	int highhph_cnt = 0;
+	
 
 	pr_debug("%s: enter\n", __func__);
 	pr_debug("%s: event_state 0x%lx\n", __func__, event_state);
@@ -1354,6 +1363,17 @@ wcd9xxx_cs_find_plug_type(struct wcd9xxx_mbhc *mbhc,
 		vdce = __wcd9xxx_codec_sta_dce_v(mbhc, true, d->dce,
 						 dce_z, (u32)mb_mv);
 		d->_vdces = vdce;
+		
+/* --- F[ALL][Main][Audio][DMS][5509215][LewisChen] Support a wide range of headset for E2 project . 20140818 begin --- */
+#if CONFIG_BSP_HW_SKU_ALL
+		if(d->_vdces < no_mic)
+			d->_type = PLUG_TYPE_HEADPHONE;
+		else if(d->_vdces <= 806 && d->_vdces > no_mic){
+			d->_type = PLUG_TYPE_HEADSET;
+			highhph_cnt++;
+		}else
+			d->_type = PLUG_TYPE_HIGH_HPH;
+#else
 		if (d->_vdces < no_mic)
 			d->_type = PLUG_TYPE_HEADPHONE;
 		else if (d->_vdces >= hs_max) {
@@ -1361,7 +1381,8 @@ wcd9xxx_cs_find_plug_type(struct wcd9xxx_mbhc *mbhc,
 			highhph_cnt++;
 		} else
 			d->_type = PLUG_TYPE_HEADSET;
-
+#endif	
+/* --- F[ALL][Main][Audio][DMS][5509215][LewisChen] 20140818 end   --- */
 		pr_debug("%s: DCE #%d, %04x, V %04d(%04d), HPHL %d TYPE %d\n",
 			 __func__, i, d->dce, vdce, d->_vdces,
 			 d->hphl_status & 0x01,
@@ -1469,7 +1490,7 @@ wcd9xxx_cs_find_plug_type(struct wcd9xxx_mbhc *mbhc,
 			type = PLUG_TYPE_INVALID;
 		}
 	}
-
+	
 	if (type == PLUG_TYPE_HEADSET &&
 	    (mbhc->mbhc_cfg->micbias_enable_flags &
 	    (1 << MBHC_MICBIAS_ENABLE_REGULAR_HEADSET)))
@@ -1512,14 +1533,26 @@ wcd9xxx_find_plug_type(struct wcd9xxx_mbhc *mbhc,
 			d->_vdces = scale_v_micb_vddio(mbhc, vdce, false);
 		else
 			d->_vdces = vdce;
+		
+/* --- F[ALL][Main][Audio][DMS][5509215][LewisChen] Support a wide range of headset for E2 project . 20140603 begin --- */
+#if CONFIG_BSP_HW_SKU_ALL
 
-		if (d->_vdces >= no_mic && d->_vdces < hs_max)
+		if (d->_vdces >= no_mic && d->_vdces <= hs_max)
 			d->_type = PLUG_TYPE_HEADSET;
 		else if (d->_vdces < no_mic)
 			d->_type = PLUG_TYPE_HEADPHONE;
 		else
 			d->_type = PLUG_TYPE_HIGH_HPH;
 
+#else
+		if (d->_vdces >= no_mic && d->_vdces < hs_max)
+			d->_type = PLUG_TYPE_HEADSET;
+		else if (d->_vdces < no_mic)
+			d->_type = PLUG_TYPE_HEADPHONE;
+		else
+			d->_type = PLUG_TYPE_HIGH_HPH;
+#endif
+/* --- F[ALL][Main][Audio][DMS][5509215][LewisChen] 20140603 end   --- */
 		ch += d->hphl_status & 0x01;
 		if (!d->swap_gnd && !d->hwvalue && !d->vddio) {
 			if (maxv < d->_vdces)
@@ -3043,18 +3076,38 @@ static int wcd9xxx_is_false_press(struct wcd9xxx_mbhc *mbhc)
 			mb_v = wcd9xxx_codec_sta_dce(mbhc, 0, true);
 			pr_debug("%s: STA[0]: %d,%d\n", __func__, mb_v,
 				 wcd9xxx_codec_sta_dce_v(mbhc, 0, mb_v));
+/*--- [ALL][Main][Audio][DMS][6039716][LewisChen] The action key of Sony MDR-1RNCMK2 doesn't work  20141125 begin ---*/
+/*--- [ALL][Main][Audio][DMS][5378512][LewisChen] The FM radio cannot be stopped when press the Play/Pause key of STH30 20140704 begin ---*/
+#if CONFIG_BSP_HW_SKU_ALL
+			if ((mb_v + 3000) < (v_b1_hu -1000) || mb_v > (v_ins_hu +3000)) {
+				r = 1;
+				break;
+			}
+#else
 			if (mb_v < v_b1_hu || mb_v > v_ins_hu) {
 				r = 1;
 				break;
 			}
+#endif
+/*--- [ALL][Main][Audio][DMS][5378512][LewisChen] 20140704 end ---*/
+/*--- [ALL][Main][Audio][DMS][6039716][LewisChen] 20141125 end ---*/
 		} else {
 			mb_v = wcd9xxx_codec_sta_dce(mbhc, 1, true);
 			pr_debug("%s: DCE[%d]: %d,%d\n", __func__, i, mb_v,
 				 wcd9xxx_codec_sta_dce_v(mbhc, 1, mb_v));
+/*--- [ALL][Main][Audio][DMS][6039716][LewisChen] The action key of Sony MDR-1RNCMK2 doesn't work  20141125 begin ---*/
+#if CONFIG_BSP_HW_SKU_ALL
+			if ((mb_v +500) < v_b1_h || mb_v > v_ins_h) {
+				r = 1;
+				break;
+			}
+#else
 			if (mb_v < v_b1_h || mb_v > v_ins_h) {
 				r = 1;
 				break;
 			}
+#endif
+/*--- [ALL][Main][Audio][DMS][6039716][LewisChen] 20141125 end ---*/
 		}
 		i++;
 	}
@@ -3372,6 +3425,21 @@ irqreturn_t wcd9xxx_dce_handler(int irq, void *data)
 				 * if left measurements are less than n_btn_con,
 				 * it's impossible to find button number
 				 */
+/* --- [ALL][Main][Audio][DMS][5378512][LewisChen] Fix no response when pressing hook key . 20140605 begin --- */
+#if CONFIG_BSP_HW_SKU_ALL
+				dce[0] = wcd9xxx_read_dce_result(codec);
+				
+				mv[0] = __wcd9xxx_codec_sta_dce_v(mbhc, 1, dce[0], dce_z,	
+					mbhc->mbhc_data.micb_mv);
+				mv_s[0] = vddio ? scale_v_micb_vddio(mbhc, mv[0], false) : mv[0];
+				btnmeas[0] = wcd9xxx_determine_button(mbhc, mv_s[0]);
+				pr_debug("%s: Second Meas HW - DCE 0x%x,%d,%d button %d\n", __func__,
+		 			dce[0] & 0xFFFF, mv[0], mv_s[0], btnmeas[0]);
+				
+				if(btnmeas[0] == btnmeas[meas])
+					btn = btnmeas[meas];
+#endif
+/* --- [ALL][Main][Audio][DMS][5378512][LewisChen] 20140605 end   --- */
 				break;
 			}
 		}

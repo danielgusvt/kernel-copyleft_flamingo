@@ -196,7 +196,10 @@ int32_t read_eeprom_memory(struct msm_eeprom_ctrl_t *e_ctrl)
 		}
 		if (emap[j].poll.valid_size) {
 			e_ctrl->i2c_client.addr_type = emap[j].poll.addr_t;
-			rc = e_ctrl->i2c_client.i2c_func_tbl->i2c_poll(
+//[All][Main][Camera][DMS][34003] Modify only for s5k5e2 eeprom 20140219 s
+                      //rc = e_ctrl->i2c_client.i2c_func_tbl->i2c_poll(
+			rc = e_ctrl->i2c_client.i2c_func_tbl->i2c_write(
+//[All][Main][Camera][DMS][34003] Modify only for s5k5e2 eeprom 20140219 E
 				&(e_ctrl->i2c_client), emap[j].poll.addr,
 				emap[j].poll.data, emap[j].poll.data_t);
 				msleep(emap[j].poll.delay);

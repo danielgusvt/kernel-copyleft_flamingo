@@ -22,6 +22,15 @@
 #include <linux/string.h>
 #include <linux/uaccess.h>
 #include <linux/io.h>
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#include <linux/of.h>
+
+#define IS_ARIMA_E2_SKU_ALL \
+( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) || \
+  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) || \
+  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) || \
+  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
 #include "ram_console.h"
 
 static struct persistent_ram_zone *ram_console_zone;
@@ -50,10 +59,64 @@ void ram_console_enable_console(int enabled)
 		ram_console.flags &= ~CON_ENABLED;
 }
 
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+static char ram_console_name[32];
+
+static struct persistent_ram_descriptor ram_console_desc = {
+	.name = ram_console_name,
+	.size = 0
+};
+
+static struct persistent_ram ram_console_ram = {
+	.start = 0,
+	.size = 0,
+	.num_descs = 1,
+	.descs = &ram_console_desc,
+};
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
+
 static int __devinit ram_console_probe(struct platform_device *pdev)
 {
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+	struct ram_console_platform_data *pdata;
+#else
 	struct ram_console_platform_data *pdata = pdev->dev.platform_data;
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
 	struct persistent_ram_zone *prz;
+
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+	int of_ret = 0;
+	u32 of_val[2];
+
+	if (pdev->dev.of_node) {
+		dev_dbg(&pdev->dev, "device tree enabled\n");
+		pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
+		if (!pdata) {
+			pr_err("%s: unable to allocate platform data\n", __func__);
+			return -ENOMEM;
+		}
+
+		of_ret = of_property_read_u32_array(pdev->dev.of_node, "qcom,memory-fixed", of_val, 2);
+		if (of_ret) {
+			pr_err("%s: device tree configuration error\n", __func__);
+			return -EFAULT;
+		}
+
+		strncpy(ram_console_name, dev_name(&pdev->dev), sizeof(ram_console_name)-1);
+		ram_console_desc.size = of_val[1];
+		ram_console_ram.start = of_val[0];
+		ram_console_ram.size = of_val[1];
+		persistent_ram_early_init(&ram_console_ram);
+	} else {
+		pdata = pdev->dev.platform_data;
+	}
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
 
 	prz = persistent_ram_init_ringbuffer(&pdev->dev, true);
 	if (IS_ERR(prz))
@@ -74,9 +137,24 @@ static int __devinit ram_console_probe(struct platform_device *pdev)
 	return 0;
 }
 
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+static struct of_device_id ram_console_dt_match[] = {
+	{	.compatible = "qcom,ram-console",
+	},
+	{}
+};
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
+
 static struct platform_driver ram_console_driver = {
 	.driver		= {
 		.name	= "ram_console",
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+		.of_match_table = ram_console_dt_match,
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
 	},
 	.probe = ram_console_probe,
 };

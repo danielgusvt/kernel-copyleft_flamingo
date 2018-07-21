@@ -840,9 +840,13 @@ static int hw_usb_reset(void)
 
 	/* ESS flushes only at end?!? */
 	hw_cwrite(CAP_ENDPTFLUSH,    ~0, ~0);   /* flush all EPs */
-
+// [All][Main][Stability][DMS06176102][47114][akenhsu] Add QCT Patch of USB in case#01889416 20150129 BEGIN
+#if 0
+	// https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/patch/drivers/usb/gadget/ci13xxx_udc.c?id=45e6400aa17e3b167d14e17d8e5417f3dd5da65f
 	/* clear setup token semaphores */
 	hw_cwrite(CAP_ENDPTSETUPSTAT, 0,  0);   /* writes its content */
+#endif
+// [All][Main][Stability][DMS06176102][47114][akenhsu] 20150129 END
 
 	/* clear complete status */
 	hw_cwrite(CAP_ENDPTCOMPLETE,  0,  0);   /* writes its content */
@@ -3379,10 +3383,77 @@ static int ci13xxx_vbus_draw(struct usb_gadget *_gadget, unsigned mA)
 	return -ENOTSUPP;
 }
 
+// [All][Main][Stability][DMS06176102][47114][akenhsu] Add QCT Patch of USB in case#01889416 20150129 BEGIN
+// https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/patch/drivers/usb/gadget/ci13xxx_udc.c?id=0ae7838b42d583de4a23418af723dff0281d9e69
+/**
+ * ci13xxx_exit_lpm: Exit controller from low power mode
+ * @udc: UDC descriptor
+ * @allow_sleep: Are we in preemptible context or not.
+ *
+ * This function check if controller is in low power mode and if so, exit from
+ * the low power mode.
+ *
+ * In case the controller is in low power mode, registers are not accessible,
+ * therefore this function can be used as utility function to ensure exit from
+ * low power mode before do registers read/write operations.
+ *
+ * Return 0 if not in low power mode and read/write operations are safe.
+ * Return -EAGAIN in case exit from low power mode was initiated, but it is not
+ * safe yet to use read/write operations against the controller registers.
+ */
+static int ci13xxx_exit_lpm(struct ci13xxx *udc, bool allow_sleep)
+{
+	if (!udc)
+		return -ENODEV;
+
+	/* Check if the controller is in low power mode state */
+	if (udc->udc_driver->in_lpm &&
+	    udc->udc_driver->in_lpm(udc) &&
+	    udc->transceiver) {
+
+		dev_dbg(udc->transceiver->dev,
+			"%s: Exit from low power mode\n",
+			__func__);
+
+		/*
+		 * Resume of the controller may be done
+		 * asynchronically in deffered context.
+		 */
+		usb_phy_set_suspend(udc->transceiver, 0);
+
+		/*
+		 * Wait for controller resume to finish in case of non atomic
+		 * context or return EAGAIN otherwise.
+		 */
+		if (allow_sleep) {
+			while (udc->udc_driver->in_lpm(udc))
+				usleep(1);
+		} else {
+			/*
+			 * Return EAGAIN only in case controller resume
+			 * was done asynchronically.
+			 */
+			if (udc->udc_driver->in_lpm(udc)) {
+				dev_err(udc->transceiver->dev,
+					"%s: Unable to exit lpm\n",
+					__func__);
+				return -EAGAIN;
+			}
+		}
+	}
+
+	return 0;
+}
+// [All][Main][Stability][DMS06176102][47114][akenhsu] 20150129 END
+
 static int ci13xxx_pullup(struct usb_gadget *_gadget, int is_active)
 {
 	struct ci13xxx *udc = container_of(_gadget, struct ci13xxx, gadget);
 	unsigned long flags;
+// [All][Main][Stability][DMS06176102][47114][akenhsu] Add QCT Patch of USB in case#01889416 20150129 BEGIN
+// https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/patch/drivers/usb/gadget/ci13xxx_udc.c?id=0ae7838b42d583de4a23418af723dff0281d9e69
+	int ret;
+// [All][Main][Stability][DMS06176102][47114][akenhsu] 20150129 END
 
 	spin_lock_irqsave(udc->lock, flags);
 	udc->softconnect = is_active;
@@ -3392,6 +3463,17 @@ static int ci13xxx_pullup(struct usb_gadget *_gadget, int is_active)
 		return 0;
 	}
 	spin_unlock_irqrestore(udc->lock, flags);
+
+// [All][Main][Stability][DMS06176102][47114][akenhsu] Add QCT Patch of USB in case#01889416 20150129 BEGIN
+// https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/patch/drivers/usb/gadget/ci13xxx_udc.c?id=0ae7838b42d583de4a23418af723dff0281d9e69
+	ret = ci13xxx_exit_lpm(udc, true);
+	if (ret) {
+		dev_err(udc->transceiver->dev,
+			"%s: Unable to exit lpm %d, ignore pullup\n",
+			__func__, ret);
+		return ret;
+	}
+// [All][Main][Stability][DMS06176102][47114][akenhsu] 20150129 END
 
 	if (is_active)
 		hw_device_state(udc->ep0out.qh.dma);
@@ -3664,6 +3746,15 @@ static irqreturn_t udc_irq(void)
 	}
 
 	spin_lock(udc->lock);
+
+// [All][Main][Stability][DMS06176102][47114][akenhsu] Add QCT Patch of USB in case#01889416 20150129 BEGIN
+// https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/patch/drivers/usb/gadget/ci13xxx_udc.c?id=c02df9c3ebf3375a16c05f9f6b92a6cd7ada1431
+	if ((udc->udc_driver->flags & CI13XXX_PULLUP_ON_VBUS) &&
+			!udc->vbus_active) {
+		spin_unlock(udc->lock);
+		return IRQ_NONE;
+	}
+// [All][Main][Stability][DMS06176102][47114][akenhsu] 20150129 END
 
 	if (udc->udc_driver->flags & CI13XXX_REGS_SHARED) {
 		if (hw_cread(CAP_USBMODE, USBMODE_CM) !=

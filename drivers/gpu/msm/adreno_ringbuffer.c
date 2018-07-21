@@ -695,8 +695,10 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 		total_sizedwords += 6;   /* space for pre_ib and post_ib */
 
 	/* Add space for the power on shader fixup if we need it */
-	if (flags & KGSL_CMD_FLAGS_PWRON_FIXUP)
-		total_sizedwords += 9;
+	if (flags & KGSL_CMD_FLAGS_PWRON_FIXUP){
+		total_sizedwords += 9;/*[All][Main][security][CR599971][WI42127][oliverchen]GPU register protection mode does not include IOMMU (SMMU) registers  */
+			
+		}
 
 	ringcmds = adreno_ringbuffer_allocspace(rb, drawctxt, total_sizedwords);
 
@@ -718,11 +720,12 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 	}
 
 	if (flags & KGSL_CMD_FLAGS_PWRON_FIXUP) {
+     /*[All][Main][security][CR599971][WI42127][oliverchen]GPU register protection mode does not include IOMMU (SMMU) registers  start*/
 		/* Disable protected mode for the fixup */
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu,
-			cp_type3_packet(CP_SET_PROTECTED_MODE, 1));
+		cp_type3_packet(CP_SET_PROTECTED_MODE, 1));
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu, 0);
-
+	/*[All][Main][security][CR599971][WI42127][oliverchen]GPU register protection mode does not include IOMMU (SMMU) registers  end*/
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu, cp_nop_packet(1));
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu,
 				KGSL_PWRON_FIXUP_IDENTIFIER);
@@ -732,11 +735,12 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 			adreno_dev->pwron_fixup.gpuaddr);
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu,
 			adreno_dev->pwron_fixup_dwords);
-
-		/* Re-enable protected mode */
+	/*[All][Main][security][CR599971][WI42127][oliverchen]GPU register protection mode does not include IOMMU (SMMU) registers  start*/
+	 /* Re-enable protected mode */
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu,
-			cp_type3_packet(CP_SET_PROTECTED_MODE, 1));
+		cp_type3_packet(CP_SET_PROTECTED_MODE, 1));
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu, 1);
+	/*[All][Main][security][CR599971][WI42127][oliverchen]GPU register protection mode does not include IOMMU (SMMU) registers  end*/
 	}
 
 	/* Add any IB required for profiling if it is enabled */

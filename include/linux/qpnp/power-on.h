@@ -15,6 +15,23 @@
 
 #include <linux/errno.h>
 
+/* [Arima5908][35596][JessicaTseng] [All][Main][Key][DMS]Add definition 8926DS 20140401 start */
+/* [Arima5908][33332][JessicaTseng] [All][Main][Key][DMS]S3 reset timer is only controlled in SBL 20140123 start */
+/* [Arima5908][32719][JessicaTseng] [All][Main][KEY][DMS]Porting reset key 20140103 start */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+#define IS_KEEP_DISABLE_S2_RESET 0
+#define IS_KEEP_DISABLE_S3_RESET 0
+#else
+#define IS_KEEP_DISABLE_S2_RESET 1
+#define IS_KEEP_DISABLE_S3_RESET 1
+#endif
+/* [Arima5908][32719][JessicaTseng] [All][Main][KEY][DMS]Porting reset key 20140103 end */
+/* [Arima5908][33332][JessicaTseng] [All][Main][Key][DMS]S3 reset timer is only controlled in SBL 20140123 end */
+/* [Arima5908][35596][JessicaTseng] [All][Main][Key][DMS]Add definition 8926DS 20140401 end */
+
 /**
  * enum pon_trigger_source: List of PON trigger sources
  * %PON_SMPL:		PON triggered by SMPL - Sudden Momentary Power Loss

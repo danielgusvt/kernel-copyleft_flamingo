@@ -76,6 +76,32 @@ static struct msm_gpiomux_config msm_eth_configs[] = {
 };
 #endif
 
+/* #//[All][Main][TP][32772]20140106,Eric, Porting elan-ektf3135 touch driver. */
+#if defined(CONFIG_TOUCHSCREEN_ELAN_EKTF3135)
+static struct gpiomux_setting elan_ektf3135_int_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting elan_ektf3135_int_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+static struct gpiomux_setting elan_ektf3135_res_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting elan_ektf3135_res_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+#else
 static struct gpiomux_setting synaptics_int_act_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
@@ -99,6 +125,8 @@ static struct gpiomux_setting synaptics_reset_sus_cfg = {
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
+#endif
+/* #//[All][Main][TP][32772]end */
 
 static struct gpiomux_setting gpio_keys_active = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -129,11 +157,15 @@ static struct gpiomux_setting gpio_spi_susp_config = {
 	.pull = GPIOMUX_PULL_DOWN,
 };
 
+/* --- [All][Main][NFC][DMS][LuboLu] Porting NFC(NXP PN547). 20140103 begin --- */
+#ifndef CONFIG_PN544
 static struct gpiomux_setting gpio_spi_cs_eth_config = {
 	.func = GPIOMUX_FUNC_4,
 	.drv = GPIOMUX_DRV_6MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
+#endif /* CONFIG_PN544 */
+/* --- [All][Main][NFC][DMS][LuboLu] 20140103 end   --- */
 
 static struct gpiomux_setting wcnss_5wire_suspend_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -165,6 +197,49 @@ static struct gpiomux_setting gpio_i2c_config = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
+/* --- [All][Main][NFC][DMS][LuboLu] Porting NFC(NXP PN547). 20140103 begin --- */
+#ifdef CONFIG_PN544
+static struct gpiomux_setting pn544_int_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_IN,
+};
+static struct gpiomux_setting pn544_ven_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_OUT_LOW,
+};
+static struct gpiomux_setting pn544_firm_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_OUT_LOW,
+};
+static struct msm_gpiomux_config pn544_configs[] __initdata = {
+	{
+		.gpio = 22,
+		.settings = {
+			[GPIOMUX_ACTIVE] = &pn544_firm_cfg,
+		},
+	},
+	{
+		.gpio = 20,
+		.settings = {
+			[GPIOMUX_ACTIVE] = &pn544_ven_cfg,
+		},
+	},
+	{
+		.gpio = 21,
+		.settings = {
+			[GPIOMUX_ACTIVE] = &pn544_int_cfg,
+		},
+	},
+};
+#endif /* CONFIG_PN544 */
+/* --- [All][Main][NFC][DMS][LuboLu] 20140103 end   --- */
+
 static struct msm_gpiomux_config msm_keypad_configs[] __initdata = {
 	{
 		.gpio = 106,
@@ -187,8 +262,38 @@ static struct msm_gpiomux_config msm_keypad_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_keys_suspend,
 		},
 	},
+/* [Arima5908][32701][JessicaTseng] [All][Main][Key][DMS]Using volume_down key enters fastboot mode 20140103 start */
+	{
+		.gpio = 110,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_keys_active,
+			[GPIOMUX_SUSPENDED] = &gpio_keys_suspend,
+		},
+	},
+/* [Arima5908][32701][JessicaTseng] [All][Main][Key][DMS]Using volume_down key enters fastboot mode 20140103 end */
 };
 
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) ) 
+
+static struct gpiomux_setting lcd_id_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_UP,
+	.dir = GPIOMUX_IN,
+};
+
+static struct gpiomux_setting lcd_id_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = GPIOMUX_IN,
+};
+#endif
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 end */
 static struct gpiomux_setting lcd_rst_act_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
@@ -203,6 +308,20 @@ static struct gpiomux_setting lcd_rst_sus_cfg = {
 };
 
 static struct msm_gpiomux_config msm_lcd_configs[] __initdata = {
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+	{
+		.gpio = 27,		/* LCD ID */
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &lcd_id_act_cfg,
+			[GPIOMUX_SUSPENDED] = &lcd_id_sus_cfg,
+		},
+	},
+#endif
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 end */
 	{
 		.gpio = 25,		/* LCD Reset */
 		.settings = {
@@ -210,6 +329,10 @@ static struct msm_gpiomux_config msm_lcd_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &lcd_rst_sus_cfg,
 		},
 	},
+/*[Arima5908][33614][bozhi_lin] NMI326 dtv function porting 20140207 begin*/	
+#if (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_DP) && defined(CONFIG_BSP_HW_SKU_8926SS)
+
+#else
 	{
 		.gpio = 109,		/* LCD Enable */
 		.settings = {
@@ -217,6 +340,8 @@ static struct msm_gpiomux_config msm_lcd_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &lcd_rst_sus_cfg,
 		},
 	}
+#endif
+/*[Arima5908][33614][bozhi_lin] 20140207 end  */
 };
 
 static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
@@ -248,6 +373,11 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_spi_susp_config,
 		},
 	},
+//[BSP][CAMERA][Kent][33449][01Begin]Config gpio14 to gpio function for the AF on Rita
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+#else		
 	{
 		.gpio      = 14,	/* BLSP1 QUP4 I2C_SDA */
 		.settings = {
@@ -255,6 +385,14 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config,
 		},
 	},
+#endif
+//[BSP][CAMERA][Kent][33449][01End]Config gpio14 to gpio function for the AF on Rita
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+#else				
 	{
 		.gpio      = 15,	/* BLSP1 QUP4 I2C_SCL */
 		.settings = {
@@ -262,6 +400,8 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config,
 		},
 	},
+#endif
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
 	{
 		.gpio      = 18,		/* BLSP1 QUP5 I2C_SDA */
 		.settings = {
@@ -276,12 +416,16 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config,
 		},
 	},
+/* --- [All][Main][NFC][DMS][LuboLu] Porting NFC(NXP PN547). 20140103 begin --- */
+#ifndef CONFIG_PN544
 	{
 		.gpio      = 22,		/* BLSP1 QUP1 SPI_CS_ETH */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &gpio_spi_cs_eth_config,
 		},
 	},
+#endif /* CONFIG_PN544 */
+/* --- [All][Main][NFC][DMS][LuboLu] 20140103 end   --- */
 	{					/*  NFC   */
 		.gpio      = 10,		/* BLSP1 QUP3 I2C_DAT */
 		.settings = {
@@ -298,6 +442,26 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 	},
 };
 
+/* #//[All][Main][TP][32772]20140106,Eric, Porting elan-ektf3135 touch driver. */
+#if defined(CONFIG_TOUCHSCREEN_ELAN_EKTF3135)
+static struct msm_gpiomux_config elan_ektf3135_io_configs[] __initdata = {
+	{
+		.gpio = 16,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &elan_ektf3135_res_act_cfg,
+			[GPIOMUX_SUSPENDED] = &elan_ektf3135_res_sus_cfg,
+		},
+	},
+	{
+		.gpio = 17,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &elan_ektf3135_int_act_cfg,
+			[GPIOMUX_SUSPENDED] = &elan_ektf3135_int_sus_cfg,
+		},
+	},
+};
+
+#else
 static struct msm_gpiomux_config msm_synaptics_configs[] __initdata = {
 	{
 		.gpio = 16,
@@ -314,6 +478,8 @@ static struct msm_gpiomux_config msm_synaptics_configs[] __initdata = {
 		},
 	},
 };
+#endif
+/* #//[All][Main][TP][32772]end */
 
 static struct gpiomux_setting gpio_nc_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -321,6 +487,12 @@ static struct gpiomux_setting gpio_nc_cfg = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+#else	
 static struct gpiomux_setting goodix_ldo_en_act_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_6MA,
@@ -332,6 +504,8 @@ static struct gpiomux_setting goodix_ldo_en_sus_cfg = {
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
+#endif
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
 
 static struct gpiomux_setting goodix_int_act_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -376,15 +550,28 @@ static struct msm_gpiomux_config msm_skuf_blsp_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_nc_cfg,
 		},
 	},
+//[BSP][CAMERA][Kent][33449][02Begin]Config gpio14 to gpio function for the AF on Rita
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+#else		
 	{
 		.gpio      = 14,	/* NC */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &gpio_nc_cfg,
 		},
 	},
+#endif
+//[BSP][CAMERA][Kent][33449][02End]Config gpio14 to gpio function for the AF on Rita
 };
 
 static struct msm_gpiomux_config msm_skuf_goodix_configs[] __initdata = {
+	/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+	#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+	#else	
 	{
 		.gpio = 15,		/* LDO EN */
 		.settings = {
@@ -392,6 +579,8 @@ static struct msm_gpiomux_config msm_skuf_goodix_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &goodix_ldo_en_sus_cfg,
 		},
 	},
+	#endif
+	/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
 	{
 		.gpio = 16,		/* RESET */
 		.settings = {
@@ -651,6 +840,12 @@ static struct msm_gpiomux_config msm_sensor_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &cam_settings[1],
 		},
 	},
+/* [Arima5908][33643][StevenChen] Fix reading LCM ID issue 2014/02/10 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) )	
+#else
 	{
 		.gpio = 27, /* CAM_MCLK1 */
 		.settings = {
@@ -659,6 +854,8 @@ static struct msm_gpiomux_config msm_sensor_configs[] __initdata = {
 		},
 
 	},
+#endif
+/* [Arima5908][33643][StevenChen] Fix reading LCM ID issue 2014/02/10 end */
 	{
 		.gpio = 29, /* CCI_I2C_SDA0 */
 		.settings = {
@@ -721,7 +918,27 @@ static struct msm_gpiomux_config msm_sensor_configs_skuf_plus[] __initdata = {
 	},
 };
 
+/*[Arima5908][32878][StevenChen] Fix GPIO default configuration of sensors 2014/01/08 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )		
+static struct gpiomux_setting auxpcm_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+/*[Arima5908][32887][StevenChen] Fix GPIO default configuration of sensors 2014/01/09 begin */
+	.pull = GPIOMUX_PULL_UP,
+/*[Arima5908][32887][StevenChen] Fix GPIO default configuration of sensors 2014/01/09 end */
+};
 
+static struct gpiomux_setting auxpcm_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+/*[Arima5908][32887][StevenChen] Fix GPIO default configuration of sensors 2014/01/09 begin */
+	.pull = GPIOMUX_PULL_UP,
+/*[Arima5908][32887][StevenChen] Fix GPIO default configuration of sensors 2014/01/09 end */
+};
+#else
 static struct gpiomux_setting auxpcm_act_cfg = {
 	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_8MA,
@@ -733,6 +950,8 @@ static struct gpiomux_setting auxpcm_sus_cfg = {
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
+#endif
+/*[Arima5908][32878][StevenChen] Fix GPIO default configuration of sensors 2014/01/08 end */
 
 static struct msm_gpiomux_config msm_auxpcm_configs[] __initdata = {
 	{
@@ -756,6 +975,10 @@ static struct msm_gpiomux_config msm_auxpcm_configs[] __initdata = {
 			[GPIOMUX_ACTIVE] = &auxpcm_act_cfg,
 		},
 	},
+/*[Arima5908][33614][bozhi_lin] NMI326 dtv function porting 20140207 begin*/
+#if (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_DP) && defined(CONFIG_BSP_HW_SKU_8926SS)	
+
+#else
 	{
 		.gpio = 66,
 		.settings = {
@@ -763,6 +986,8 @@ static struct msm_gpiomux_config msm_auxpcm_configs[] __initdata = {
 			[GPIOMUX_ACTIVE] = &auxpcm_act_cfg,
 		},
 	},
+#endif	
+/*[Arima5908][33614][bozhi_lin] 20140207 end  */
 };
 
 static struct gpiomux_setting usb_otg_sw_cfg = {
@@ -865,6 +1090,60 @@ static void msm_gpiomux_sdc3_install(void)
 static void msm_gpiomux_sdc3_install(void) {}
 #endif /* CONFIG_MMC_MSM_SDC3_SUPPORT */
 
+/*[Arima5908][33614][bozhi_lin] NMI326 dtv function porting 20140207 begin*/
+#if defined(CONFIG_ISDBT_NMI)
+static struct gpiomux_setting dtv_reset_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = GPIOMUX_OUT_LOW, 
+};
+
+static struct gpiomux_setting dtv_en_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = GPIOMUX_OUT_LOW,
+};
+
+static struct gpiomux_setting dtv_int_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting dtv_int_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct msm_gpiomux_config msm_dtv_configs[] __initdata = {
+	{
+		.gpio = 66, /*DTV EN DP*/
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &dtv_en_act_cfg,
+			[GPIOMUX_SUSPENDED] = &dtv_en_act_cfg,
+		},
+	},
+	{
+		.gpio = 23, /*DTV RESET DP*/
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &dtv_reset_act_cfg,
+			[GPIOMUX_SUSPENDED] = &dtv_reset_act_cfg,
+		},
+	},
+	{
+		.gpio = 109, /*DTV IRQ DP*/
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &dtv_int_act_cfg,
+			[GPIOMUX_SUSPENDED] = &dtv_int_sus_cfg,
+		},
+	},
+};
+#endif
+/*[Arima5908][33614][bozhi_lin] 20140207 end  */
+
 void __init msm8226_init_gpiomux(void)
 {
 	int rc;
@@ -896,8 +1175,23 @@ void __init msm8226_init_gpiomux(void)
 		msm_gpiomux_install(msm_skuf_goodix_configs,
 				ARRAY_SIZE(msm_skuf_goodix_configs));
 	else
+/* #//[All][Main][TP][32772]20140106,Eric, Porting elan-ektf3135 touch driver. */
+#if defined(CONFIG_TOUCHSCREEN_ELAN_EKTF3135)
+	msm_gpiomux_install(elan_ektf3135_io_configs,
+					ARRAY_SIZE(elan_ektf3135_io_configs));
+
+#else					
 		msm_gpiomux_install(msm_synaptics_configs,
 				ARRAY_SIZE(msm_synaptics_configs));
+#endif	
+/* #//[All][Main][TP][32772]end */
+
+/* --- [All][Main][NFC][DMS][LuboLu] Porting NFC(NXP PN547). 20140103 begin --- */
+#ifdef CONFIG_PN544
+	msm_gpiomux_install(pn544_configs,
+			ARRAY_SIZE(pn544_configs));
+#endif /* CONFIG_PN544 */
+/* --- [All][Main][NFC][DMS][LuboLu] 20140103 end   --- */
 
 	if (of_board_is_skuf())
 		msm_gpiomux_install(msm_skuf_nfc_configs,
@@ -921,6 +1215,12 @@ void __init msm8226_init_gpiomux(void)
 
 	msm_gpiomux_sdc3_install();
 
+/*[Arima5908][33614][bozhi_lin] NMI326 dtv function porting 20140207 begin*/
+#if defined(CONFIG_ISDBT_NMI)
+	msm_gpiomux_install(msm_dtv_configs, ARRAY_SIZE(msm_dtv_configs));
+#endif	
+/*[Arima5908][33614][bozhi_lin] 20140207 end  */
+
 	/*
 	 * HSIC STROBE gpio is also used by the ethernet. Install HSIC
 	 * gpio mux config only when HSIC is enabled. HSIC config will
@@ -928,8 +1228,15 @@ void __init msm8226_init_gpiomux(void)
 	 */
 #ifdef CONFIG_USB_EHCI_MSM_HSIC
 	if (machine_is_msm8926()) {
+//[BSP][CAMERA][Kent][33449][03Begin]Config gpio14 to gpio function for the AF on Gina
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+#else		
 		msm_hsic_configs[0].gpio = 119; /* STROBE */
 		msm_hsic_configs[1].gpio = 120; /* DATA */
+#endif
+//[BSP][CAMERA][Kent][33449][03Begin]Config gpio14 to gpio function for the AF on Gina
 	}
 	msm_gpiomux_install(msm_hsic_configs, ARRAY_SIZE(msm_hsic_configs));
 #endif

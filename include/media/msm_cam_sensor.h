@@ -439,6 +439,9 @@ enum msm_sensor_cfg_type_t {
 	CFG_SET_WHITE_BALANCE,
 	CFG_SET_AUTOFOCUS,
 	CFG_CANCEL_AUTOFOCUS,
+	//[BSP][CAMERA][KENT][36089][01Begin]add SET_FPS function
+	CFG_SET_FPS,
+	//[BSP][CAMERA][KENT][36089][01End]add SET_FPS function
 };
 
 enum msm_actuator_cfg_type_t {
@@ -539,6 +542,11 @@ enum af_camera_name {
 	ACTUATOR_MAIN_CAM_3,
 	ACTUATOR_MAIN_CAM_4,
 	ACTUATOR_MAIN_CAM_5,
+//[All][Main][Camera][40101]Modify for Camera Second source 20140411 S
+#if CONFIG_BSP_HW_SKU_ALL
+	ACTUATOR_MAIN_CAM_6,	
+#endif
+//[All][Main][Camera][40101]Modify for Camera Second source 20140411 E
 	ACTUATOR_WEB_CAM_0,
 	ACTUATOR_WEB_CAM_1,
 	ACTUATOR_WEB_CAM_2,

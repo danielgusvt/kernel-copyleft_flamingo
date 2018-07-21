@@ -6,6 +6,8 @@
  *  Copyright (c) 2005 Michael Haboustak <mike-@cinci.rr.com> for Concept2, Inc
  *  Copyright (c) 2007-2008 Oliver Neukum
  *  Copyright (c) 2006-2010 Jiri Kosina
+ *  Copyright 2011,2012 Sony Corporation
+ *  Copyright (c) 2012 Sony Mobile Communications AB.
  */
 
 /*
@@ -889,8 +891,15 @@ static int usbhid_output_raw_report(struct hid_device *hid, __u8 *buf, size_t co
 	struct usb_interface *intf = usbhid->intf;
 	struct usb_host_interface *interface = intf->cur_altsetting;
 	int ret;
-
+// B[All][Main][USB][DMS05387007][36810][StevenChen] Merge patch FP17518 to support DualShock3 2014/04/23 begin
+#ifndef CONFIG_HID_SONY_PS3_CTRL_BT
 	if (usbhid->urbout && report_type != HID_FEATURE_REPORT) {
+#else
+	if (usbhid->urbout && report_type != HID_FEATURE_REPORT &&
+			report_type != HID_FEATREP_SKIPREPID &&
+			report_type != HID_OUTREP_SKIPREPID) {
+#endif
+// B[All][Main][USB][DMS05387007][36810][StevenChen] Merge patch FP17518 to support DualShock3 2014/04/23 end
 		int actual_length;
 		int skipped_report_id = 0;
 
@@ -919,6 +928,27 @@ static int usbhid_output_raw_report(struct hid_device *hid, __u8 *buf, size_t co
 			count--;
 			skipped_report_id = 1;
 		}
+// B[All][Main][USB][DMS05387007][36810][StevenChen] Merge patch FP17518 to support DualShock3 2014/04/23 begin
+#ifdef CONFIG_HID_SONY_PS3_CTRL_BT
+		if (report_type == HID_FEATREP_SKIPREPID ||
+			report_type == HID_OUTREP_SKIPREPID) {
+
+			buf++;
+			count--;
+			skipped_report_id = 1;
+
+			switch (report_type) {
+			case HID_FEATREP_SKIPREPID:
+				report_type = HID_FEATURE_REPORT;
+				break;
+			case HID_OUTREP_SKIPREPID:
+				report_type = HID_OUTPUT_REPORT;
+			default:
+				break;
+			}
+		}
+#endif
+// B[All][Main][USB][DMS05387007][36810][StevenChen] Merge patch FP17518 to support DualShock3 2014/04/23 end
 		ret = usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
 			HID_REQ_SET_REPORT,
 			USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,

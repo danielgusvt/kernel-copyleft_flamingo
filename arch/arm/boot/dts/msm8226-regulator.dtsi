@@ -20,7 +20,9 @@
 			reg = <0x1700 0x100>;
 			regulator-min-microvolt = <900000>;
 			regulator-max-microvolt = <1350000>;
-			qcom,mode = "auto";
+// [All][Main][HWWD][DMS05406637][45393][akenhsu] Disable auto mode suggested by QCT case#01748400 20141020 BEGIN
+//			qcom,mode = "auto";
+// [All][Main][HWWD][DMS05406637][45393][akenhsu] 20141020 END
 		};
 	};
 };
@@ -74,7 +76,10 @@
 			<1050000 1050000 1140000>,
 			<1050000 1050000 1140000>;
 		qcom,cpr-voltage-ceiling = <1050000 1150000 1280000>;
-		qcom,cpr-voltage-floor = <1050000 1050000 1100000>;
+// [All][Main][Stability][DMS05406637][46540][akenhsu] bump up APC power rail for stability concern 20141130 BEGIN
+//		qcom,cpr-voltage-floor = <1050000 1050000 1100000>;
+		qcom,cpr-voltage-floor = <1050000 1075000 1125000>;		
+// [All][Main][Stability][DMS05406637][46540][akenhsu] 20141130 END
 		vdd-apc-supply = <&pm8226_s2>;
 
 		vdd-mx-supply = <&pm8226_l3_ao>;
@@ -102,8 +107,11 @@
 		qcom,cpr-fuse-redun-row = <139 0>;
 		qcom,cpr-fuse-redun-target-quot = <24 12 0>;
 		qcom,cpr-fuse-redun-ro-sel = <46 36 39>;
-
+// B[All][Main][HWWD][DMS05406637][42671][akenhsu] Re-Enable CPU CPR function 20140813 BEGIN
+/*<2014/05/01-37196-chrislin,F[All][Main][Kernel][] Disable CPU CPR*/
 		qcom,cpr-enable;
+/*>2014/05/01-37196-chrislin*/
+// B[All][Main][HWWD][DMS05406637][42671][akenhsu] 20140813 END
 		qcom,cpr-fuse-cond-min-volt-sel = <54 42 6 7 1>;
 		qcom,cpr-cond-min-voltage = <1140000>;
 		qcom,cpr-fuse-uplift-sel = <22 53 1 0 0>;

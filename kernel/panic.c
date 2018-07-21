@@ -24,6 +24,16 @@
 #include <linux/nmi.h>
 #include <linux/dmi.h>
 #include <linux/coresight.h>
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#include <linux/rtc.h>
+#include <linux/time.h>
+
+#define IS_ARIMA_E2_SKU_ALL \
+( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) || \
+  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) || \
+  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) || \
+  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
 
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
@@ -46,6 +56,21 @@ EXPORT_SYMBOL_GPL(panic_timeout);
 ATOMIC_NOTIFIER_HEAD(panic_notifier_list);
 
 EXPORT_SYMBOL(panic_notifier_list);
+
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+static struct rtc_time get_timestamp(void)
+{
+	struct timespec ts;
+	struct rtc_time tm = {0};
+
+	getnstimeofday(&ts);
+	rtc_time_to_tm(ts.tv_sec, &tm);
+
+	return tm;
+}
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
 
 static long no_blink(int state)
 {
@@ -80,6 +105,11 @@ void panic(const char *fmt, ...)
 	va_list args;
 	long i, i_next = 0;
 	int state = 0;
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+	struct rtc_time tm = get_timestamp();
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
 
 	coresight_abort();
 	/*
@@ -109,6 +139,14 @@ void panic(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 	printk(KERN_EMERG "Kernel panic - not syncing: %s\n",buf);
+// [All][Main][Ramdump][DMS][34159][akenhsu] Add ramconsole for share kernel info to SBL1 20140222 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+	printk(KERN_EMERG "Time of panic (m-d-y h:m:s): "
+		"%02d-%02d-%d %02d:%02d:%02d\n",
+		tm.tm_mon + 1, tm.tm_mday, tm.tm_year + 1900,
+		tm.tm_hour, tm.tm_min, tm.tm_sec); 
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][34159][akenhsu] 20140222 END
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	/*
 	 * Avoid nested stack-dumping if a panic occurs during oops processing

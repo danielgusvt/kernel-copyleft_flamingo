@@ -1998,11 +1998,18 @@ static ssize_t n_tty_write(struct tty_struct *tty, struct file *file,
 			if (tty->ops->flush_chars)
 				tty->ops->flush_chars(tty);
 		} else {
-
 			while (nr > 0) {
+			
+			    //# << 2014/06/19-39824-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635611 Security Incident SSIMS00000354
 				mutex_lock(&tty->output_lock);
+                //# >> 2014/06/19-39824-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635611 Security Incident SSIMS00000354
+
 				c = tty->ops->write(tty, b, nr);
+				
+				//# << 2014/06/19-39824-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635611 Security Incident SSIMS00000354
 				mutex_unlock(&tty->output_lock);
+                //# >> 2014/06/19-39824-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] DMS05635611 Security Incident SSIMS00000354
+
 				if (c < 0) {
 					retval = c;
 					goto break_out;

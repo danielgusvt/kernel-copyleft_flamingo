@@ -114,6 +114,11 @@ __setup("norandmaps", disable_randmaps);
 unsigned long zero_pfn __read_mostly;
 unsigned long highest_memmap_pfn __read_mostly;
 
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 S
+
+extern unsigned int badpage_cnt;
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 E
+
 /*
  * CONFIG_MMU architectures set up ZERO_PAGE in their paging_init()
  */
@@ -687,6 +692,11 @@ static void print_bad_pte(struct vm_area_struct *vma, unsigned long addr,
 
 	mapping = vma->vm_file ? vma->vm_file->f_mapping : NULL;
 	index = linear_page_index(vma, addr);
+
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 S
+	badpage_cnt++;
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 E
+
 
 	printk(KERN_ALERT
 		"BUG: Bad page map in process %s  pte:%08llx pmd:%08llx\n",

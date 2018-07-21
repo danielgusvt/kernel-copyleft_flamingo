@@ -53,6 +53,17 @@
 
 #include "mdss_fb.h"
 
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+#include <linux/gpio.h> 
+#endif
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
+
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
 #else
@@ -109,10 +120,12 @@ void mdss_fb_no_update_notify_timer_cb(unsigned long data)
 static int mdss_fb_notify_update(struct msm_fb_data_type *mfd,
 							unsigned long *argp)
 {
+	//<2014/05/28 EricLin, Security Incident.
 	int ret;
 	unsigned long notify = 0x0, to_user = 0x0;
 
 	ret = copy_from_user(&notify, argp, sizeof(unsigned long));
+	//>2014/05/28 EricLin
 	if (ret) {
 		pr_err("%s:ioctl failed\n", __func__);
 		return ret;
@@ -129,7 +142,9 @@ static int mdss_fb_notify_update(struct msm_fb_data_type *mfd,
 		INIT_COMPLETION(mfd->update.comp);
 		ret = wait_for_completion_interruptible_timeout(
 						&mfd->update.comp, 4 * HZ);
+		//<2014/05/28 EricLin, Security Incident.				
 		to_user = (unsigned int)mfd->update.value;
+		//>2014/05/28 EricLin
 		if (mfd->update.type == NOTIFY_TYPE_SUSPEND) {
 			to_user = (unsigned int)mfd->update.type;
 			ret = 1;
@@ -138,7 +153,9 @@ static int mdss_fb_notify_update(struct msm_fb_data_type *mfd,
 		INIT_COMPLETION(mfd->no_update.comp);
 		ret = wait_for_completion_interruptible_timeout(
 						&mfd->no_update.comp, 4 * HZ);
+		//<2014/05/28 EricLin, Security Incident.				
 		to_user = (unsigned int)mfd->no_update.value;
+		//>2014/05/28 EricLin
 	} else {
 		if (mfd->panel_power_on) {
 			INIT_COMPLETION(mfd->power_off_comp);
@@ -150,7 +167,9 @@ static int mdss_fb_notify_update(struct msm_fb_data_type *mfd,
 	if (ret == 0)
 		ret = -ETIMEDOUT;
 	else if (ret > 0)
+		//<2014/05/28 EricLin, Security Incident.
 		ret = copy_to_user(argp, &to_user, sizeof(unsigned long));
+		//>2014/05/28 EricLin
 	return ret;
 }
 
@@ -268,14 +287,17 @@ static ssize_t mdss_fb_get_type(struct device *dev,
 	return ret;
 }
 
-static void mdss_fb_parse_dt(struct msm_fb_data_type *mfd)
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 begin */
+//static void mdss_fb_parse_dt_split(struct msm_fb_data_type *mfd)
+static void mdss_fb_parse_dt(struct msm_fb_data_type *mfd) 
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 end */
 {
 	u32 data[2] = {0};
 	u32 panel_xres;
 	struct platform_device *pdev = mfd->pdev;
-
-	mfd->splash_logo_enabled = of_property_read_bool(pdev->dev.of_node,
-				"qcom,mdss-fb-splash-logo-enabled");
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 begin */
+	mfd->splash_logo_enabled = of_property_read_bool(pdev->dev.of_node, "qcom,mdss-fb-splash-logo-enabled"); 
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 end */
 
 	of_property_read_u32_array(pdev->dev.of_node,
 		"qcom,mdss-fb-split", data, 2);
@@ -334,7 +356,6 @@ static void __mdss_fb_idle_notify_work(struct work_struct *work)
 	pr_debug("Idle timeout %dms expired!\n", mfd->idle_time);
 	sysfs_notify(&mfd->fbi->dev->kobj, NULL, "idle_notify");
 }
-
 static ssize_t mdss_fb_get_idle_time(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -346,7 +367,6 @@ static ssize_t mdss_fb_get_idle_time(struct device *dev,
 
 	return ret;
 }
-
 static ssize_t mdss_fb_set_idle_time(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -366,7 +386,6 @@ static ssize_t mdss_fb_set_idle_time(struct device *dev,
 
 	return count;
 }
-
 static ssize_t mdss_fb_get_idle_notify(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -379,20 +398,87 @@ static ssize_t mdss_fb_get_idle_notify(struct device *dev,
 
 	return ret;
 }
+/* [All][Main][LCM][DMS][39445][StevenChen] Read LCM ID info. for ATS 2014/06/12 begin */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/* [Arima5908][33643][StevenChen] Fix reading LCM ID issue 2014/02/10 begin */
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
+#define LCM_ID_PIN	27
+extern char temp_buf[];		
+#if 0
+static ssize_t mdss_fb_lcm_module_id(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	int val=0;
+	
+	val = gpio_request_one(LCM_ID_PIN, GPIOF_DIR_IN|GPIOF_INIT_HIGH	, "LCM_ID");
+	if(val<0)
+		gpio_free(LCM_ID_PIN);
+
+/* [All][Main][LCM][DMS][38418][StevenChen] LCM auto detection for 2nd & 3rd source 2014/05/22 begin */
+	if(gpio_get_value(LCM_ID_PIN))
+		ret = snprintf(buf, PAGE_SIZE, "OFILM\n");
+	else
+		ret = snprintf(buf, PAGE_SIZE, "TRULY\n");
+/* [All][Main][LCM][DMS][38418][StevenChen] LCM auto detection for 2nd & 3rd source 2014/05/22 end */
+	return ret;
+}
+#else
+static ssize_t mdss_fb_lcm_module_id(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+			
+	if(*temp_buf != '\0')
+		ret = snprintf(buf, PAGE_SIZE, temp_buf);
+	else
+		ret = snprintf(buf, PAGE_SIZE, "TRULY\n");
+
+	return ret;
+}
+#endif /* #if 0 */
+#endif
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 end */
+/* [Arima5908][33643][StevenChen] Fix reading LCM ID issue 2014/02/10 end */
+/* [All][Main][LCM][DMS][39445][StevenChen] Read LCM ID info. for ATS 2014/06/12 end */
 
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, mdss_fb_get_type, NULL);
 static DEVICE_ATTR(msm_fb_split, S_IRUGO, mdss_fb_get_split, NULL);
 static DEVICE_ATTR(show_blank_event, S_IRUGO, mdss_mdp_show_blank_event, NULL);
 static DEVICE_ATTR(idle_time, S_IRUGO | S_IWUSR | S_IWGRP,
 	mdss_fb_get_idle_time, mdss_fb_set_idle_time);
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+static DEVICE_ATTR(lcm_module_id, S_IRUGO, mdss_fb_lcm_module_id, NULL);
+#endif
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
 static DEVICE_ATTR(idle_notify, S_IRUGO, mdss_fb_get_idle_notify, NULL);
-
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
 	&dev_attr_msm_fb_split.attr,
 	&dev_attr_show_blank_event.attr,
 	&dev_attr_idle_time.attr,
 	&dev_attr_idle_notify.attr,
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+	&dev_attr_lcm_module_id.attr,	
+#endif
+/*[Arima5908][33534][StevenChen] Read LCM ID for ATS 2014/01/30 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
 	NULL,
 };
 
@@ -539,7 +625,10 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		break;
 	}
 
-	if (mfd->splash_logo_enabled) {
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 begin */
+	//if (mfd->index == 0) {
+	if (mfd->splash_logo_enabled) { 
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 end */
 		mfd->splash_thread = kthread_run(mdss_fb_splash_thread, mfd,
 				"mdss_fb_splash");
 		if (IS_ERR(mfd->splash_thread)) {
@@ -785,6 +874,7 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 	int (*update_ad_input)(struct msm_fb_data_type *mfd);
 	u32 temp = bkl_lvl;
 
+pr_err("[%s] bkl_lvl = %d", __func__,bkl_lvl);
 	if (((!mfd->panel_power_on && mfd->dcm_state != DCM_ENTER)
 		|| !mfd->bl_updated) && !IS_CALIB_MODE_BL(mfd)) {
 		mfd->unset_bl_level = bkl_lvl;
@@ -1255,7 +1345,10 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 	mfd->panel_power_on = false;
 	mfd->dcm_state = DCM_UNINIT;
 
-	mdss_fb_parse_dt(mfd);
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 begin */
+	//mdss_fb_parse_dt_split(mfd);
+	mdss_fb_parse_dt(mfd); 
+/* [All][Main][LCM][DMS05379061][35893][StevenChen] LCM continue splash on and change boot logo 2014/04/09 end */
 
 	if (mdss_fb_alloc_fbmem(mfd)) {
 		pr_err("unable to allocate framebuffer memory\n");
@@ -1680,10 +1773,10 @@ static int mdss_fb_pan_display_ex(struct fb_info *info,
 	struct fb_var_screeninfo *var = &disp_commit->var;
 	u32 wait_for_finish = disp_commit->wait_for_finish;
 	int ret = 0;
-
+//<2014/05/28 EricLin, Security Incident.
 	if (!mfd || (!mfd->op_enable) || (!mfd->panel_power_on))
 		return -EPERM;
-
+//>2014/05/28 EricLin
 	if (var->xoffset > (info->var.xres_virtual - info->var.xres))
 		return -EINVAL;
 

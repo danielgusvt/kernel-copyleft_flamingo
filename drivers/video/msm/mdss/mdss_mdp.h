@@ -179,8 +179,10 @@ struct mdss_mdp_ctl {
 
 	u32 clk_rate;
 	int force_screen_state;
+/*B[All][Main][Display][DMSDMS05369025][36577][StevenChen]Fix blue screen issue due to MDP underrun 2014/04/20 begin*/
 	struct mdss_mdp_perf_params cur_perf;
 	struct mdss_mdp_perf_params new_perf;
+/*B[All][Main][Display][DMSDMS05369025][36577][StevenChen]Fix blue screen issue due to MDP underrun 2014/04/20 end*/
 
 	struct mdss_data_type *mdata;
 	struct msm_fb_data_type *mfd;

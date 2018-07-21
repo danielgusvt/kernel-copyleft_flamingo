@@ -38,6 +38,14 @@
 #include "timer.h"
 #include "wdog_debug.h"
 
+// [All][Main][Ramdump][DMS][33828][akenhsu] Add restart_parameters for Linux and SBL1 20140214 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+#include <linux/proc_fs.h>
+#include <linux/string.h>
+#include <linux/uaccess.h>
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][33828][akenhsu] 20140214 END
+
 #define WDT0_RST	0x38
 #define WDT0_EN		0x40
 #define WDT0_BARK_TIME	0x4C
@@ -65,6 +73,14 @@ void *restart_reason;
 
 int pmic_reset_irq;
 static void __iomem *msm_tmr0_base;
+
+// [All][Main][Ramdump][DMS][33828][akenhsu] Add restart_parameters for Linux and SBL1 20140214 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+#define CRASH_STATUS_BUF_SIZE 2
+static int crash_status = 0;
+static char crash_status_buf[CRASH_STATUS_BUF_SIZE+1];
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][33828][akenhsu] 20140214 END
 
 #ifdef CONFIG_MSM_DLOAD_MODE
 static int in_panic;
@@ -270,12 +286,32 @@ static void msm_restart_prepare(const char *cmd)
 	pm8xxx_reset_pwr_off(1);
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
+// [All][Main][Ramdump][DMS][33536][akenhsu] Modify Qualcomm's ramdump mechanism for SONY 20140130 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+    // Add in_panic judgement to WARM_RESET to keep memory unreset for SBL1 ramdump
+	if (get_dload_mode() || (cmd != NULL && cmd[0] != '\0') || in_panic)
+#else // Qualcomm Original
+// [All][Main][Ramdump][DMS][33536][akenhsu] 20140130 END
 	if (get_dload_mode() || (cmd != NULL && cmd[0] != '\0'))
+// [All][Main][Ramdump][DMS][33536][akenhsu] Modify Qualcomm's ramdump mechanism for SONY 20140130 BEGIN
+#endif // end of Arima Define
+// [All][Main][Ramdump][DMS][33536][akenhsu] 20140130 END
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 	else
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 
+// [All][Main][Ramdump][DMS][33536][akenhsu] Modify Qualcomm's ramdump mechanism for SONY 20140130 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+	if (in_panic) {
+		// Write magic number(0xc0dedead) to share memory to tell SB1 kernel panic to ramdump
+		__raw_writel(0xc0dedead, restart_reason);
+	} else if (cmd != NULL) {
+#else // Qualcomm Original
+// [All][Main][Ramdump][DMS][33536][akenhsu] 20140130 END
 	if (cmd != NULL) {
+// [All][Main][Ramdump][DMS][33536][akenhsu] Modify Qualcomm's ramdump mechanism for SONY 20140130 BEGIN
+#endif // end of Arima Define
+// [All][Main][Ramdump][DMS][33536][akenhsu] 20140130 END
 		if (!strncmp(cmd, "bootloader", 10)) {
 			__raw_writel(0x77665500, restart_reason);
 		} else if (!strncmp(cmd, "recovery", 8)) {
@@ -286,6 +322,10 @@ static void msm_restart_prepare(const char *cmd)
 			unsigned long code;
 			code = simple_strtoul(cmd + 4, NULL, 16) & 0xff;
 			__raw_writel(0x6f656d00 | code, restart_reason);
+    /*++ MikeLin - 20130920 FoTA integration ++*/
+		} else if (!strncmp(cmd, "oemF", 4)) {
+			__raw_writel(0x6f656d46, restart_reason);
+    /*++ MikeLin - 20130920 FoTA integration ++*/
 		} else if (!strncmp(cmd, "edl", 3)) {
 			enable_emergency_dload_mode();
 		} else {
@@ -329,9 +369,61 @@ void msm_restart(char mode, const char *cmd)
 	printk(KERN_ERR "Restarting has failed\n");
 }
 
+// [All][Main][Ramdump][DMS][33828][akenhsu] Add restart_parameters for Linux and SBL1 20140214 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+void msm_set_crash_status(int status)
+{
+	crash_status = status;
+}
+EXPORT_SYMBOL(msm_set_crash_status);
+
+static ssize_t crash_status_read(struct file *file, char __user *buf, size_t len, loff_t *offset)
+{
+	loff_t pos = *offset;
+	ssize_t count;
+	size_t max = CRASH_STATUS_BUF_SIZE;
+
+	if (pos >= CRASH_STATUS_BUF_SIZE)
+		return 0;
+
+	count = min(len, max);
+	memset(crash_status_buf, 0, sizeof(crash_status_buf));
+
+	if ((msm_get_crash_status() == 1) || (crash_status == 1)) {
+		snprintf(crash_status_buf, sizeof(crash_status_buf), "1\n");
+	} else {
+		snprintf(crash_status_buf, sizeof(crash_status_buf), "0\n");
+	}
+
+	if (copy_to_user(buf, crash_status_buf, count))
+		return -EFAULT;
+
+	*offset += count;
+	return count;
+}
+
+static const struct file_operations crash_status_file_ops = {
+	.owner = THIS_MODULE,
+	.read = crash_status_read,
+};
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][33828][akenhsu] 20140214 END
+
 static int __init msm_pmic_restart_init(void)
 {
 	int rc;
+// [All][Main][Ramdump][DMS][33828][akenhsu] Add restart_parameters for Linux and SBL1 20140214 BEGIN
+#if IS_ARIMA_E2_SKU_ALL
+	struct proc_dir_entry *entry;
+
+	entry = create_proc_entry("crash_status", S_IFREG | S_IRUGO, NULL);
+	if (!entry) {
+		pr_err("crash_status: failed to create proc entry\n");
+		return 0;
+	}
+	entry->proc_fops = &crash_status_file_ops;
+#endif // IS_ARIMA_E2_SKU_ALL
+// [All][Main][Ramdump][DMS][33828][akenhsu] 20140214 END
 
 	if (use_restart_v2())
 		return 0;

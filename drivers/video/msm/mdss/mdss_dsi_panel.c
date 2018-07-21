@@ -26,6 +26,28 @@
 
 #define DT_CMD_HDR 6
 
+//[All][Main][TP][DMS05342323][38605][thundertang] Reduce resume time(Resume performance) ++
+#define Add_TS_HWReset
+#ifdef Add_TS_HWReset
+	#define SYSTEM_RESET_PIN_TS 16	// Touch Screen HW Reset Pin
+#endif
+//[All][Main][TP][DMS05342323][38605][thundertang] Reduce resume time(Resume performance) --
+
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+#define TRULY_MIPI_DISP_RST_N 25
+#define TRULY_LCM_BL_EN 15
+
+int lcm_first_boot=1;
+
+#endif
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
+
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -152,7 +174,8 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
-
+// Upgrade codebase to cs12 check with steven begin
+#if 0
 static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	int rc = 0;
@@ -190,12 +213,26 @@ rst_gpio_err:
 disp_en_gpio_err:
 	return rc;
 }
-
+#endif
+// Upgrade codebase to cs12 check with steven end
 int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_info *pinfo = NULL;
+	
+	/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+	/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+	#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+	/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
+	int rc = 0;
+	#else
 	int i, rc = 0;
+	#endif
+	pr_info("[R]%s(%d): ++", __func__, __LINE__);
+	/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -206,20 +243,51 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 				panel_data);
 
 	if (!gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
-		pr_debug("%s:%d, reset line not configured\n",
+		pr_err("%s:%d, reset line not configured\n",
 			   __func__, __LINE__);
 	}
 
 	if (!gpio_is_valid(ctrl_pdata->rst_gpio)) {
-		pr_debug("%s:%d, reset line not configured\n",
+		pr_err("%s:%d, reset line not configured\n",
 			   __func__, __LINE__);
 		return rc;
 	}
 
-	pr_debug("%s: enable = %d\n", __func__, enable);
+	pr_err("%s: enable = %d\n", __func__, enable);
 	pinfo = &(ctrl_pdata->panel_data.panel_info);
 
 	if (enable) {
+	/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+	/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+	#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+	/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
+
+		//[All][Main][TP][DMS05342323][38605][thundertang] Reduce resume time(Resume performance) ++
+		#ifdef Add_TS_HWReset
+		gpio_direction_output(SYSTEM_RESET_PIN_TS, 0);	//Touch Screen Reset Pin as Low
+		gpio_set_value((ctrl_pdata->rst_gpio), 1);
+		msleep(10);
+		gpio_set_value((ctrl_pdata->rst_gpio), 0);
+		//udelay(200);
+		msleep(10);
+		gpio_set_value((ctrl_pdata->rst_gpio), 1);
+		gpio_direction_output(SYSTEM_RESET_PIN_TS, 1);	//Touch Screen Reset Pin as High
+		msleep(120);
+		#else
+		gpio_set_value((ctrl_pdata->rst_gpio), 1);
+		msleep(10);
+		gpio_set_value((ctrl_pdata->rst_gpio), 0);
+		//udelay(200);
+		msleep(10);
+		gpio_set_value((ctrl_pdata->rst_gpio), 1);
+		msleep(120);
+		#endif
+		//[All][Main][TP][DMS05342323][38605][thundertang] Reduce resume time(Resume performance) --
+
+	#else
 		rc = mdss_dsi_request_gpios(ctrl_pdata);
 		if (rc) {
 			pr_err("gpio request failed\n");
@@ -237,6 +305,9 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			}
 		}
 
+	#endif
+	/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+
 		if (gpio_is_valid(ctrl_pdata->mode_gpio)) {
 			if (pinfo->mode_gpio_state == MODE_GPIO_HIGH)
 				gpio_set_value((ctrl_pdata->mode_gpio), 1);
@@ -244,10 +315,10 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 				gpio_set_value((ctrl_pdata->mode_gpio), 0);
 		}
 		if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT) {
-			pr_debug("%s: Panel Not properly turned OFF\n",
+			pr_err("%s: Panel Not properly turned OFF\n",
 						__func__);
 			ctrl_pdata->ctrl_state &= ~CTRL_STATE_PANEL_INIT;
-			pr_debug("%s: Reset panel done\n", __func__);
+			pr_err("%s: Reset panel done\n", __func__);
 		}
 	} else {
 		if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
@@ -255,6 +326,13 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_free(ctrl_pdata->disp_en_gpio);
 		}
 		gpio_set_value((ctrl_pdata->rst_gpio), 0);
+	/*[Arima5908][44147][Raymond_lin] Solve CPT LCM suspend current increase 0.3mA -20140912 begin*/
+	#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )	
+		msleep(10);
+		gpio_set_value((ctrl_pdata->rst_gpio), 1);
+	#endif	
+	/*[Arima5908][44147][Raymond_lin] Solve CPT LCM suspend current increase 0.3mA -20140912 end*/
 		gpio_free(ctrl_pdata->rst_gpio);
 		if (gpio_is_valid(ctrl_pdata->mode_gpio))
 			gpio_free(ctrl_pdata->mode_gpio);
@@ -317,10 +395,52 @@ static int mdss_dsi_panel_partial_update(struct mdss_panel_data *pdata)
 	return rc;
 }
 
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
+static int aat1430_backlight_control(struct mdss_dsi_ctrl_pdata *ctrl, int bl_level)
+{
+     int i = 0;
+     int set_bl; 
+	set_bl = abs(ctrl->panel_data.panel_info.bl_max-bl_level)+1;
+	 pr_info("[R]%s:++,bl_level %d \n", __func__,bl_level);
+	 for (i=0;i<set_bl;i++)	
+	 	{
+                     gpio_set_value(TRULY_LCM_BL_EN, 1);
+			udelay(10);
+			gpio_set_value(TRULY_LCM_BL_EN, 0);
+			udelay(10);
+	 	}
+	 if(bl_level==0)	 	
+	 	gpio_set_value(TRULY_LCM_BL_EN, 0);
+	 else
+	       gpio_set_value(TRULY_LCM_BL_EN, 1);
+		udelay(500);	
+   return 0;
+}
+#endif
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+
 static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 							u32 bl_level)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS))
+	unsigned long flags;
+	pr_info("[R][%s](%d):bl_level:%d\n", __func__, __LINE__,bl_level);
+#endif
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -362,6 +482,19 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	default:
 		pr_err("%s: Unknown bl_ctrl configuration\n",
 			__func__);
+
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS))
+                spin_lock_irqsave(&ctrl_pdata->irq_lock, flags);
+		aat1430_backlight_control(ctrl_pdata, bl_level);
+                spin_unlock_irqrestore(&ctrl_pdata->irq_lock, flags);		
+#endif
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
 		break;
 	}
 }
@@ -380,12 +513,35 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 				panel_data);
 	mipi  = &pdata->panel_info.mipi;
 
-	pr_debug("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
+	pr_err("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
+
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+/* [All][Main][LCM][DMS][38250][StevenChen]Improve resume time 2014/05/19 begin */
+/*
+	if(lcm_first_boot == 0){
+		gpio_set_value(TRULY_MIPI_DISP_RST_N, 1);
+		msleep(10);
+		gpio_set_value(TRULY_MIPI_DISP_RST_N, 0);
+		msleep(10);
+		gpio_set_value(TRULY_MIPI_DISP_RST_N, 1);
+		msleep(120);
+	}
+*/
+/* [All][Main][LCM][DMS][38250][StevenChen]Improve resume time 2014/05/19 end */
+	lcm_first_boot=0;
+#endif
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
 
 	if (ctrl->on_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->on_cmds);
 
-	pr_debug("%s:-\n", __func__);
+	pr_err("%s:-\n", __func__);
 	return 0;
 }
 
@@ -402,14 +558,34 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	pr_debug("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
+	pr_err("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
 
 	mipi  = &pdata->panel_info.mipi;
 
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds);
 
-	pr_debug("%s:-\n", __func__);
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+	if(lcm_first_boot == 0)
+	{
+		/*[Arima5908][43596][bozhi_lin] workaround for avoid current will increase 1mA after suspend resume 20140905 begin*/
+		#if 0	
+		gpio_set_value(TRULY_MIPI_DISP_RST_N, 0);
+		#endif
+		/*[Arima5908][43596][bozhi_lin] 20140905 end*/
+		msleep(120);	
+	}
+
+#endif
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
+
+	pr_err("%s:-\n", __func__);
 	return 0;
 }
 
@@ -862,6 +1038,18 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		} else if (!strncmp(data, "bl_ctrl_dcs", 11)) {
 			ctrl_pdata->bklt_ctrl = BL_DCS_CMD;
 		}
+	/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+	/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+	#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+	 ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+		else{
+                	ctrl_pdata ->bklt_ctrl = pinfo->bklt_ctrl;
+		}
+	#endif
+	/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+	/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
 	}
 	rc = of_property_read_u32(np, "qcom,mdss-brightness-max-level", &tmp);
 	pinfo->brightness_max = (!rc ? tmp : MDSS_MAX_BL_BRIGHTNESS);
@@ -1047,6 +1235,24 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pinfo->cont_splash_enabled = false;
 	pr_info("%s: Continuous splash %s", __func__,
 		pinfo->cont_splash_enabled ? "enabled" : "disabled");
+
+
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 begin */
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 begin */
+#if ((CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926SS) \
+ ||  (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP1) && defined(CONFIG_BSP_HW_SKU_8926DS) )
+	rc =gpio_request(TRULY_LCM_BL_EN,"BL EN PIN");
+	   if (rc) {
+		pr_info("gpio15 request failed: %d\n", rc);
+	} else {
+		udelay(10);
+		msleep(1);
+	}
+#endif	
+/*[Arima5908][32703][StevenChen] LCM driver porting 2014/01/03 end */
+/* [All][Main][LCM][DMS][StevenChen] Add 8926DS definition 2014/04/01 end */
 
 	ctrl_pdata->on = mdss_dsi_panel_on;
 	ctrl_pdata->off = mdss_dsi_panel_off;

@@ -714,4 +714,13 @@ config SENSORS_CAPELLA_CM36283
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called CM36283.
+
+# [All][Main][Key][DMS][33317][akenhsu] Long press power key for 30s to crash android system 20140123 BEGIN
+config INPUT_FORCE_CRASH
+       tristate "FORCE CRASH"
+       default n
+       help
+         This option enables forcing crash by long pressing power key.
+# [All][Main][Key][DMS][33317][akenhsu] 20140123 END
+
 endif

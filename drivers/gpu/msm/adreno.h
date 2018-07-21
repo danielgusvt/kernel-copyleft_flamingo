@@ -19,9 +19,9 @@
 #include "adreno_profile.h"
 #include "kgsl_iommu.h"
 #include <mach/ocmem.h>
-
+/*[All][Main][security][CR599971][WI42127][oliverchen]GPU register protection mode does not include IOMMU (SMMU) registers  start*/
 #include "a3xx_reg.h"
-
+/*[All][Main][security][CR599971][WI42127][oliverchen]GPU register protection mode does not include IOMMU (SMMU) registers  end*/
 #define DEVICE_3D_NAME "kgsl-3d"
 #define DEVICE_3D0_NAME "kgsl-3d0"
 
@@ -718,9 +718,11 @@ static inline int adreno_add_read_cmds(struct kgsl_device *device,
 	*cmds++ = 0xFFFFFFFF;
 	*cmds++ = 0xFFFFFFFF;
 
+	//# << 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
 	/* WAIT_REG_MEM turns back on protected mode - push it off */
 	*cmds++ = cp_type3_packet(CP_SET_PROTECTED_MODE, 1);
 	*cmds++ = 0;
+	//# >> 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
 
 	cmds += __adreno_add_idle_indirect_cmds(cmds, nop_gpuaddr);
 	return cmds - start;
@@ -904,6 +906,7 @@ adreno_get_rptr(struct adreno_ringbuffer *rb)
 	adreno_readreg(adreno_dev, ADRENO_REG_CP_RB_RPTR, &result);
 	return result;
 }
+/*[All][Main][security][CR599971][WI42127][oliverchen]GPU register protection mode does not include IOMMU (SMMU) registers  start*/
 /*
  * adreno_set_protected_registers() - Protect the specified range of registers
  * from being accessed by the GPU
@@ -941,5 +944,11 @@ static inline void adreno_set_protected_registers(struct kgsl_device *device,
 	kgsl_regwrite(device, A3XX_CP_PROTECT_REG_0 + *index, val);
 	*index = *index + 1;
 }
-
+#ifdef CONFIG_DEBUG_FS
+void adreno_debugfs_init(struct kgsl_device *device);
+#else
+	static inline void adreno_debugfs_init(struct kgsl_device *device) { }
+#endif
+	
+/*[All][Main][security][CR599971][WI42127][oliverchen]GPU register protection mode does not include IOMMU (SMMU) registers  end*/
 #endif /*__ADRENO_H */

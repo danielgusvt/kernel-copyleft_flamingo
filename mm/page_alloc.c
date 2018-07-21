@@ -297,6 +297,12 @@ static inline int bad_range(struct zone *zone, struct page *page)
 }
 #endif
 
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 S
+
+unsigned int badpage_cnt = 0;
+EXPORT_SYMBOL(badpage_cnt);
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 E
+
 static void bad_page(struct page *page)
 {
 	static unsigned long resume;

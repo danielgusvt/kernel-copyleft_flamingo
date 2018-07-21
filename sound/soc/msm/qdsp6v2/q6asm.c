@@ -46,7 +46,9 @@
 
 #define TRUE        0x01
 #define FALSE       0x00
-
+//<2014/05/28 EricLin, Security Incident.
+#define FRAME_NUM             (8)
+//>2014/05/28 EricLin
 /* TODO, combine them together */
 static DEFINE_MUTEX(session_lock);
 struct asm_mmap {
@@ -930,6 +932,12 @@ int q6asm_audio_client_buf_alloc(unsigned int dir,
 			pr_debug("%s: buffer already allocated\n", __func__);
 			return 0;
 		}
+		//[Camera][Kent][45663][01Begin]remove the path and it will affect the AAC hw encoder (SR01770136)
+		//<2014/05/28 EricLin, Security Incident.
+		//if (bufcnt != FRAME_NUM)			
+		//	goto fail;		
+		//>2014/05/28 EricLin	
+		//[Camera][Kent][45663][01End]remove the path and it will affect the AAC hw encoder (SR01770136)
 		mutex_lock(&ac->cmd_lock);
 		buf = kzalloc(((sizeof(struct audio_buffer))*bufcnt),
 				GFP_KERNEL);

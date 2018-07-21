@@ -34,7 +34,9 @@ struct tspp_filter {
 	int pid;
 	int mask;
 	enum tspp_mode mode;
+	//<2014/05/28 EricLin, Security Incident.	
 	unsigned int priority;	/* 0 - 15 */
+	//>2014/05/28 EricLin
 	int decrypt;
 	enum tspp_source source;
 };

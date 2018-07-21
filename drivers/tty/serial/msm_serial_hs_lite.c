@@ -1956,9 +1956,18 @@ static struct platform_driver msm_hsl_platform_driver = {
 	},
 };
 
+//<2014/06/11-39419-EricLin, [All][Main][S1][] Modify UART logs control by miscta #2473.
+extern int UartLogsOut;
+//>2014/06/11-39419-EricLin
+
 static int __init msm_serial_hsl_init(void)
 {
 	int ret;
+
+  //<2014/06/11-39419-EricLin, [All][Main][S1][] Modify UART logs control by miscta #2473.
+	if(!UartLogsOut)
+		msm_hsl_uart_driver.cons = NULL;
+  //>2014/06/11-39419-EricLin
 
 	ret = uart_register_driver(&msm_hsl_uart_driver);
 	if (unlikely(ret))

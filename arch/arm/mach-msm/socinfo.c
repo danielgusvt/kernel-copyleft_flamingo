@@ -1247,6 +1247,44 @@ static void  __init soc_info_populate(struct soc_device_attribute *soc_dev_attr)
 
 }
 
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 S
+#include <linux/proc_fs.h>
+#include <linux/uaccess.h>
+#include <linux/string.h>
+
+#define BADPAGE_STATUS_CMD_SIZE	2
+#define MAX_BADPAGE_NUM			10
+static char bps[BADPAGE_STATUS_CMD_SIZE+1];
+extern unsigned int badpage_cnt;
+static ssize_t badpage_status_read(struct file *file, char __user *buf, size_t len, loff_t *offset)
+{
+	loff_t pos = *offset;
+	ssize_t count;
+	size_t max = BADPAGE_STATUS_CMD_SIZE;
+    
+	if (pos >= BADPAGE_STATUS_CMD_SIZE)
+		return 0;
+
+	pr_emerg("%s: 0x%x\n", __func__, badpage_cnt);
+	
+	count = min(len, max);
+	snprintf(bps, sizeof(bps), (badpage_cnt >= MAX_BADPAGE_NUM) ? "1\n" : "0\n");
+    
+	if (copy_to_user(buf, bps, count))
+		return -EFAULT;
+
+	*offset += count;
+	return count;
+}
+
+static const struct file_operations badpage_status_file_ops = {
+	.owner = THIS_MODULE,
+	.read = badpage_status_read,
+};
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 E
+
+
+
 static int __init socinfo_init_sysdev(void)
 {
 	int err;
@@ -1327,6 +1365,21 @@ static int __init socinfo_init_sysdev(void)
 
 	socinfo_create_files(&soc_sys_device, socinfo_v7_files,
 				ARRAY_SIZE(socinfo_v7_files));
+
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 S
+
+	{
+		struct proc_dir_entry *entry_bps;
+		entry_bps = create_proc_entry("badpage_status", S_IFREG|S_IRUGO, NULL);
+		if (!entry_bps) {
+			pr_err("%s: failed to create proc entry - badpage_status\n", __func__);
+			return 0;
+		}
+		entry_bps->proc_fops = &badpage_status_file_ops;
+		entry_bps->size = BADPAGE_STATUS_CMD_SIZE;
+	}
+//[All][Main][eMMC][DMS] add badpage status for ATS Functiontest (eMMC Status) 20140123 E
+
 
 	return 0;
 

@@ -162,6 +162,38 @@ void tune_lmk_zone_param(struct zonelist *zonelist, int classzone_idx,
 	}
 }
 
+// [All][Main][HWWD][DMS05463582][42019][akenhsu] Allow the lowmemorykiller to count highmem when being called by the kswapd if the lowmem watermarks are satisfied. 20140730 BEGIN
+// reference: https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/drivers/staging/android?h=msm-3.10&id=e137b1a41f2953f3780ef05c4bb2ab5ab31a198a
+#ifdef CONFIG_HIGHMEM
+void adjust_gfp_mask(gfp_t *gfp_mask)
+{
+	struct zone *preferred_zone;
+	struct zonelist *zonelist;
+	enum zone_type high_zoneidx;
+
+	if (current_is_kswapd()) {
+		zonelist = node_zonelist(0, *gfp_mask);
+		high_zoneidx = gfp_zone(*gfp_mask);
+		first_zones_zonelist(zonelist, high_zoneidx, NULL,
+				&preferred_zone);
+
+		if (high_zoneidx == ZONE_NORMAL) {
+			if (zone_watermark_ok_safe(preferred_zone, 0,
+					high_wmark_pages(preferred_zone), 0,
+					0))
+				*gfp_mask |= __GFP_HIGHMEM;
+		} else if (high_zoneidx == ZONE_HIGHMEM) {
+			*gfp_mask |= __GFP_HIGHMEM;
+		}
+	}
+}
+#else
+void adjust_gfp_mask(gfp_t *unused)
+{
+}
+#endif // CONFIG_HIGHMEM
+// [All][Main][HWWD][DMS05463582][42019][akenhsu] 20140730 END
+
 void tune_lmk_param(int *other_free, int *other_file, struct shrink_control *sc)
 {
 	gfp_t gfp_mask;
@@ -172,6 +204,9 @@ void tune_lmk_param(int *other_free, int *other_file, struct shrink_control *sc)
 	int use_cma_pages;
 
 	gfp_mask = sc->gfp_mask;
+// [All][Main][HWWD][DMS05463582][42019][akenhsu] Allow the lowmemorykiller to count highmem when being called by the kswapd if the lowmem watermarks are satisfied. 20140730 BEGIN
+    adjust_gfp_mask(&gfp_mask);
+// [All][Main][HWWD][DMS05463582][42019][akenhsu] 20140730 END
 	zonelist = node_zonelist(0, gfp_mask);
 	high_zoneidx = gfp_zone(gfp_mask);
 	first_zones_zonelist(zonelist, high_zoneidx, NULL, &preferred_zone);

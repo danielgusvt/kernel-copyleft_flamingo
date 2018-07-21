@@ -96,8 +96,11 @@
 /* RBCPR Result status Register */
 #define REG_RBCPR_RESULT_0		0xA0
 
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=53b88d883065a751853a6a79e37737122efc0321
 #define RBCPR_RESULT0_BUSY_SHIFT	19
 #define RBCPR_RESULT0_BUSY_MASK		BIT(RBCPR_RESULT0_BUSY_SHIFT)
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 #define RBCPR_RESULT0_ERROR_STEPS_SHIFT	2
 #define RBCPR_RESULT0_ERROR_STEPS_BITS	4
 #define RBCPR_RESULT0_ERROR_STEPS_MASK	((1<<RBCPR_RESULT0_ERROR_STEPS_BITS)-1)
@@ -119,6 +122,15 @@
 #define CPR_INT_DEFAULT	(CPR_INT_UP | CPR_INT_DOWN)
 
 #define CPR_NUM_RING_OSC	8
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+//https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?h=LNX.LA.3.5.2.1_RB1.1&id=d11db4359ae58f963010493e69370702a27c129d
+#define CR_FIXED_616385
+#if defined(CR_FIXED_616385)
+
+#else
+#define CPR_NUM_SAVE_REGS	10
+#endif
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 
 /* RBCPR Clock Control Register */
 #define RBCPR_CLK_SEL_MASK	BIT(0)
@@ -167,8 +179,10 @@ struct cpr_regulator {
 	/* Process voltage variables */
 	u32		pvs_bin;
 	u32		speed_bin;
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=94a1a72d8613cb8da6b085884f4d13973f4d3834
 	u32		pvs_version;
-
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 	/* APC voltage regulator */
 	struct regulator	*vdd_apc;
 
@@ -199,6 +213,15 @@ struct cpr_regulator {
 	int		*save_ctl;
 	int		*save_irq;
 
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
+
+#else
+	u32		save_regs[CPR_NUM_SAVE_REGS];
+	u32		save_reg_val[CPR_NUM_SAVE_REGS];
+#endif
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
+
 	/* Config parameters */
 	bool		enable;
 	u32		ref_clk_khz;
@@ -218,7 +241,11 @@ struct cpr_regulator {
 	u32		num_corners;
 	int		*quot_adjust;
 
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
 	bool		is_cpr_suspended;
+#endif
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 };
 
 #define CPR_DEBUG_MASK_IRQ	BIT(0)
@@ -343,9 +370,15 @@ static void cpr_ctl_enable(struct cpr_regulator *cpr_vreg, int corner)
 	u32 val;
 	int fuse_corner = cpr_vreg->corner_map[corner];
 
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
 	if (cpr_vreg->is_cpr_suspended)
 		return;
+#endif		
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Reference: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=81b8a974c59ca6b4840314e1774d51d026fbefaf
 	/* Program Consecutive Up & Down */
 	val = ((cpr_vreg->timer_cons_down & RBIF_TIMER_ADJ_CONS_DOWN_MASK)
 			<< RBIF_TIMER_ADJ_CONS_DOWN_SHIFT) |
@@ -358,6 +391,7 @@ static void cpr_ctl_enable(struct cpr_regulator *cpr_vreg, int corner)
 			RBCPR_CTL_SW_AUTO_CONT_ACK_EN,
 			cpr_vreg->save_ctl[corner]);
 	cpr_irq_set(cpr_vreg, cpr_vreg->save_irq[corner]);
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 
 	if (cpr_is_allowed(cpr_vreg) &&
 	    (cpr_vreg->ceiling_volt[fuse_corner] >
@@ -370,9 +404,15 @@ static void cpr_ctl_enable(struct cpr_regulator *cpr_vreg, int corner)
 
 static void cpr_ctl_disable(struct cpr_regulator *cpr_vreg)
 {
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
 	if (cpr_vreg->is_cpr_suspended)
 		return;
+#endif
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=81b8a974c59ca6b4840314e1774d51d026fbefaf
 	cpr_irq_set(cpr_vreg, 0);
 	cpr_ctl_modify(cpr_vreg, RBCPR_CTL_SW_AUTO_CONT_NACK_DN_EN |
 			RBCPR_CTL_SW_AUTO_CONT_ACK_EN, 0);
@@ -382,9 +422,12 @@ static void cpr_ctl_disable(struct cpr_regulator *cpr_vreg)
 	cpr_irq_clr(cpr_vreg);
 	cpr_write(cpr_vreg, REG_RBIF_CONT_ACK_CMD, 1);
 	cpr_write(cpr_vreg, REG_RBIF_CONT_NACK_CMD, 1);
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 	cpr_ctl_modify(cpr_vreg, RBCPR_CTL_LOOP_EN, 0);
 }
 
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=53b88d883065a751853a6a79e37737122efc0321
 static bool cpr_ctl_is_enabled(struct cpr_regulator *cpr_vreg)
 {
 	u32 reg_val;
@@ -400,6 +443,35 @@ static bool cpr_ctl_is_busy(struct cpr_regulator *cpr_vreg)
 	reg_val = cpr_read(cpr_vreg, REG_RBCPR_RESULT_0);
 	return reg_val & RBCPR_RESULT0_BUSY_MASK;
 }
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
+
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
+
+#else
+static void cpr_regs_save(struct cpr_regulator *cpr_vreg)
+{
+	int i, offset;
+
+	for (i = 0; i < CPR_NUM_SAVE_REGS; i++) {
+		offset = cpr_vreg->save_regs[i];
+		cpr_vreg->save_reg_val[i] = cpr_read(cpr_vreg, offset);
+	}
+}
+
+static void cpr_regs_restore(struct cpr_regulator *cpr_vreg)
+{
+	int i, offset;
+	u32 val;
+
+	for (i = 0; i < CPR_NUM_SAVE_REGS; i++) {
+		offset = cpr_vreg->save_regs[i];
+		val = cpr_vreg->save_reg_val[i];
+		cpr_write(cpr_vreg, offset, val);
+	}
+}
+#endif
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 
 static void cpr_corner_save(struct cpr_regulator *cpr_vreg, int corner)
 {
@@ -742,6 +814,9 @@ static irqreturn_t cpr_irq_handler(int irq, void *dev)
 
 	cpr_debug_irq("IRQ_STATUS = 0x%02X\n", reg_val);
 
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=53b88d883065a751853a6a79e37737122efc0321
+#if 1
 	if (!cpr_ctl_is_enabled(cpr_vreg)) {
 		cpr_debug_irq("CPR is disabled\n");
 		goto _exit;
@@ -749,6 +824,12 @@ static irqreturn_t cpr_irq_handler(int irq, void *dev)
 		cpr_debug_irq("CPR measurement is not ready\n");
 		goto _exit;
 	} else if (!cpr_is_allowed(cpr_vreg)) {
+#else
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
+	if (!cpr_is_allowed(cpr_vreg)) {
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+#endif
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 		reg_val = cpr_read(cpr_vreg, REG_RBCPR_CTL);
 		pr_err("Interrupt broken? RBCPR_CTL = 0x%02X\n", reg_val);
 		goto _exit;
@@ -910,15 +991,30 @@ static int cpr_suspend(struct cpr_regulator *cpr_vreg)
 {
 	cpr_debug("suspend\n");
 
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
 	mutex_lock(&cpr_vreg->cpr_mutex);
+#endif
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 
 	cpr_ctl_disable(cpr_vreg);
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=53b88d883065a751853a6a79e37737122efc0321
+//	disable_irq(cpr_vreg->cpr_irq);
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 
 	cpr_irq_clr(cpr_vreg);
-
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
 	cpr_vreg->is_cpr_suspended = true;
 
 	mutex_unlock(&cpr_vreg->cpr_mutex);
+
+#else
+	cpr_regs_save(cpr_vreg);
+
+#endif	
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 	return 0;
 }
 
@@ -927,14 +1023,28 @@ static int cpr_resume(struct cpr_regulator *cpr_vreg)
 {
 	cpr_debug("resume\n");
 
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
 	mutex_lock(&cpr_vreg->cpr_mutex);
 
 	cpr_vreg->is_cpr_suspended = false;
+#else
+	cpr_regs_restore(cpr_vreg);
+#endif	
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 	cpr_irq_clr(cpr_vreg);
 
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=53b88d883065a751853a6a79e37737122efc0321
+//	enable_irq(cpr_vreg->cpr_irq);
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 	cpr_ctl_enable(cpr_vreg, cpr_vreg->corner);
 
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
 	mutex_unlock(&cpr_vreg->cpr_mutex);
+#endif
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 	return 0;
 }
 
@@ -1030,6 +1140,27 @@ static int __devinit cpr_config(struct cpr_regulator *cpr_vreg,
 	val |= RBCPR_CTL_TIMER_EN | RBCPR_CTL_COUNT_MODE;
 	val |= RBCPR_CTL_SW_AUTO_CONT_ACK_EN;
 	cpr_write(cpr_vreg, REG_RBCPR_CTL, val);
+
+/*[Arima5911][35874][bozhi_lin] QCT CR#616385 to remove CPR register save and restore for suspend and resume 20140408 begin*/
+#if defined(CR_FIXED_616385)
+
+#else
+	/* Registers to save & restore for suspend */
+	cpr_vreg->save_regs[0] = REG_RBCPR_TIMER_INTERVAL;
+	cpr_vreg->save_regs[1] = REG_RBCPR_STEP_QUOT;
+	cpr_vreg->save_regs[2] = REG_RBIF_TIMER_ADJUST;
+	cpr_vreg->save_regs[3] = REG_RBIF_LIMIT;
+	cpr_vreg->save_regs[4] = REG_RBIF_SW_VLEVEL;
+	cpr_vreg->save_regs[5] = REG_RBIF_IRQ_EN(cpr_vreg->irq_line);
+	cpr_vreg->save_regs[6] = REG_RBCPR_CTL;
+	cpr_vreg->save_regs[7] = REG_RBCPR_GCNT_TARGET
+		(cpr_vreg->cpr_fuse_ro_sel[CPR_FUSE_CORNER_SVS]);
+	cpr_vreg->save_regs[8] = REG_RBCPR_GCNT_TARGET
+		(cpr_vreg->cpr_fuse_ro_sel[CPR_FUSE_CORNER_NORMAL]);
+	cpr_vreg->save_regs[9] = REG_RBCPR_GCNT_TARGET
+		(cpr_vreg->cpr_fuse_ro_sel[CPR_FUSE_CORNER_TURBO]);
+#endif		
+/*[Arima5911][35874][bozhi_lin] 20140408 end  */
 
 	cpr_irq_set(cpr_vreg, CPR_INT_DEFAULT);
 
@@ -1289,6 +1420,9 @@ static int cpr_voltage_uplift_wa_inc_quot(struct cpr_regulator *cpr_vreg,
 	return rc;
 }
 
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=94a1a72d8613cb8da6b085884f4d13973f4d3834
+#if 1
 static void cpr_parse_pvs_version_fuse(struct cpr_regulator *cpr_vreg,
 				struct device_node *of_node)
 {
@@ -1321,18 +1455,18 @@ static void cpr_parse_pvs_version_fuse(struct cpr_regulator *cpr_vreg,
  * fuse corner.
  */
 static int cpr_get_corner_quot_adjustment(struct cpr_regulator *cpr_vreg,
-					struct device *dev)
-{
-	int rc = 0;
+ 					struct device *dev)
+ {
+ 	int rc = 0;
 	int i, size;
-	struct property *prop;
-	bool corners_mapped;
+ 	struct property *prop;
+ 	bool corners_mapped;
 	u32 *tmp, *freq_mappings = NULL;
 	u32 scaling, max_factor;
 	u32 corner, turbo_corner = 0, normal_corner = 0, svs_corner = 0;
 	u32 freq_turbo, freq_normal, freq_corner;
-
-	prop = of_find_property(dev->of_node, "qcom,cpr-corner-map", NULL);
+ 
+ 	prop = of_find_property(dev->of_node, "qcom,cpr-corner-map", NULL);
 
 	if (prop) {
 		size = prop->length / sizeof(u32);
@@ -1345,7 +1479,7 @@ static int cpr_get_corner_quot_adjustment(struct cpr_regulator *cpr_vreg,
 	cpr_vreg->corner_map = devm_kzalloc(dev, sizeof(int) * (size + 1),
 					GFP_KERNEL);
 	if (!cpr_vreg->corner_map) {
-		pr_err("Can't allocate memory for cpr_vreg->corner_map\n");
+		pr_err("Can't allocate memory for cpr_vreg->corner_map\n");;
 		return -ENOMEM;
 	}
 	cpr_vreg->num_corners = size;
@@ -1385,6 +1519,7 @@ static int cpr_get_corner_quot_adjustment(struct cpr_regulator *cpr_vreg,
 		pr_err("memory alloc failed\n");
 		return -ENOMEM;
 	}
+
 	rc = of_property_read_u32_array(dev->of_node,
 		"qcom,cpr-speed-bin-max-corners", tmp, size);
 	if (rc < 0) {
@@ -1482,7 +1617,6 @@ static int cpr_get_corner_quot_adjustment(struct cpr_regulator *cpr_vreg,
 	 * @freq_turbo: MHz, max frequency running at TURBO fuse corner;
 	 * @freq_normal: MHz, max frequency running at NORMAL fuse corner.
 	 */
-
 	freq_turbo = freq_mappings[turbo_corner];
 	freq_normal = freq_mappings[normal_corner];
 	if (freq_normal == 0 || freq_turbo <= freq_normal) {
@@ -1491,6 +1625,7 @@ static int cpr_get_corner_quot_adjustment(struct cpr_regulator *cpr_vreg,
 		kfree(freq_mappings);
 		return -EINVAL;
 	}
+
 	freq_turbo /= 1000000;	/* MHz */
 	freq_normal /= 1000000;
 	scaling = 1000 *
@@ -1500,7 +1635,7 @@ static int cpr_get_corner_quot_adjustment(struct cpr_regulator *cpr_vreg,
 	scaling = min(scaling, max_factor);
 	pr_info("quotient adjustment scaling factor: %d.%03d\n",
 			scaling / 1000, scaling % 1000);
-
+ 
 	/*
 	 * Walk through the corners mapped to the TURBO fuse corner and
 	 * calculate the quotient adjustment for each one using the following
@@ -1523,6 +1658,109 @@ static int cpr_get_corner_quot_adjustment(struct cpr_regulator *cpr_vreg,
 	kfree(freq_mappings);
 	return 0;
 }
+
+#else
+static int cpr_get_of_corner_mappings(struct cpr_regulator *cpr_vreg,
+					struct device *dev)
+{
+	int rc = 0;
+	int i, size, stripe_size;
+	struct property *prop;
+	u32 *tmp;
+	bool corners_mapped;
+
+	prop = of_find_property(dev->of_node, "qcom,cpr-corner-map", NULL);
+
+	if (prop) {
+		size = prop->length / sizeof(u32);
+		corners_mapped = true;
+	} else {
+		size = CPR_FUSE_CORNER_MAX - 1;
+		corners_mapped = false;
+	}
+
+	cpr_vreg->corner_map = devm_kzalloc(dev, sizeof(int) * (size + 1),
+					GFP_KERNEL);
+	if (!cpr_vreg->corner_map) {
+		pr_err("Can't allocate cpr_vreg->corner_map memory\n");
+		return -ENOMEM;
+	}
+	cpr_vreg->num_corners = size;
+
+	if (!corners_mapped) {
+		for (i = CPR_FUSE_CORNER_SVS; i < CPR_FUSE_CORNER_MAX; i++)
+			cpr_vreg->corner_map[i] = i;
+	} else {
+		rc = of_property_read_u32_array(dev->of_node,
+			"qcom,cpr-corner-map", &cpr_vreg->corner_map[1], size);
+
+		if (rc) {
+			pr_err("qcom,cpr-corner-map missing, rc = %d", rc);
+			return rc;
+		}
+	}
+
+	cpr_vreg->quot_adjust = devm_kzalloc(dev,
+			sizeof(int) * (cpr_vreg->num_corners + 1),
+			GFP_KERNEL);
+	if (!cpr_vreg->quot_adjust) {
+		pr_err("Can't allocate cpr_vreg->quot_adjust memory\n");
+		return -ENOMEM;
+	}
+
+	prop = of_find_property(dev->of_node, "qcom,cpr-quot-adjust-table",
+				NULL);
+
+	if (prop) {
+		if (!corners_mapped) {
+			pr_err("qcom,cpr-corner-map missing\n");
+			return -EINVAL;
+		}
+
+		size = prop->length / sizeof(u32);
+		tmp = kzalloc(sizeof(u32) * size, GFP_KERNEL);
+		if (!tmp)
+			return -ENOMEM;
+
+		rc = of_property_read_u32_array(dev->of_node,
+				"qcom,cpr-quot-adjust-table", tmp, size);
+		if (rc) {
+			pr_err("qcom,cpr-quot-adjust-table missing, rc = %d",
+				rc);
+			kfree(tmp);
+			return rc;
+		}
+
+		stripe_size = sizeof(struct quot_adjust_info) / sizeof(int);
+
+		if ((size % stripe_size) != 0) {
+			pr_err("qcom,cpr-quot-adjust-table data is not correct");
+			kfree(tmp);
+			return -EINVAL;
+		}
+
+		for (i = 0; i < size; i += stripe_size) {
+			if (tmp[i] == cpr_vreg->speed_bin) {
+				if (tmp[i + 1] >= 1 &&
+					tmp[i + 1] <=
+					cpr_vreg->num_corners) {
+					cpr_vreg->quot_adjust[tmp[i + 1]] =
+					tmp[i + 2];
+				} else {
+					pr_err("qcom,cpr-quot-adjust-table data is not correct");
+					kfree(tmp);
+					return -EINVAL;
+				}
+			}
+		}
+
+		kfree(tmp);
+	}
+
+	return 0;
+}
+#endif
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 
 static int __devinit cpr_init_cpr_efuse(struct platform_device *pdev,
 				     struct cpr_regulator *cpr_vreg)
@@ -1664,7 +1902,14 @@ static int __devinit cpr_init_cpr_efuse(struct platform_device *pdev,
 		}
 	}
 
+// B[All][Main][Power][DMS05406637][42257][akenhsu] Enable CPU CPR to verify the DMS05406637 suggested by case#01642757 20140805 BEGIN
+// Ref: https://www.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=94a1a72d8613cb8da6b085884f4d13973f4d3834
+#if 1
 	rc = cpr_get_corner_quot_adjustment(cpr_vreg, &pdev->dev);
+#else
+	rc = cpr_get_of_corner_mappings(cpr_vreg, &pdev->dev);
+#endif
+// B[All][Main][Power][DMS05406637][42257][akenhsu] 20140805 END
 	if (rc)
 		return rc;
 

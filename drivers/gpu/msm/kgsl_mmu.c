@@ -402,8 +402,10 @@ int kgsl_mmu_init(struct kgsl_device *device)
 	if (status)
 		return status;
 
+	//# << 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
 	/* Mark the setstate memory as read only */
 	mmu->setstate_memory.flags |= KGSL_MEMFLAGS_GPUREADONLY;
+    //# >> 2014/08/06-42291-youchihwang, SecurityPatch [All] [Main] [S1] [Flamingo E2] Security incident SSIMS00000340, DMS05798887
 
 	kgsl_sharedmem_set(device, &mmu->setstate_memory, 0, 0,
 				mmu->setstate_memory.size);

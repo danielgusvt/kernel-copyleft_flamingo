@@ -262,6 +262,10 @@ struct msm_otg_platform_data {
 	int log2_itc;
 	bool l1_supported;
 	bool dpdm_pulldown_added;
+// [All][Main][Stability][DMS06176102][47114][akenhsu] Add QCT Patch of USB in case#01889416 20150130 BEGIN
+// https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/patch/drivers/usb/gadget/ci13xxx_udc.h?id=6a70ad8cfe09e62352e9b78e7bfd7b160fce775f
+	bool rw_during_lpm_workaround;
+// [All][Main][Stability][DMS06176102][47114][akenhsu] 20150130 END
 	bool enable_ahb2ahb_bypass;
 	bool disable_retention_with_vdd_min;
 };

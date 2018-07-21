@@ -79,7 +79,16 @@
 #define IADC1_BMS_FAST_AVG_EN		0x5B
 
 /* Configuration for saving of shutdown soc/iavg */
+/*[Arima5908][42364][bozhi_lin] workaround for battery capacity mismatch under -20 degreeC 20140807 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+#define IGNORE_SOC_TEMP_DECIDEG		(-300)
+#else
 #define IGNORE_SOC_TEMP_DECIDEG		50
+#endif
+/*[Arima5908][42364][bozhi_lin] 20140807 end*/
 #define IAVG_STEP_SIZE_MA		10
 #define IAVG_INVALID			0xFF
 #define SOC_INVALID			0x7E
@@ -94,6 +103,23 @@
 #define FCC_DEFAULT_TEMP			250
 
 #define QPNP_BMS_DEV_NAME "qcom,qpnp-bms"
+/*[Arima5908][42699][bozhi_lin] set smooth time to 30 seconds when battery capacity is low 20140814 begin*/
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+#define CAPACITY_SMOOTH_TIME	60
+#define LOW_CAPACITY	5
+#define LOW_CAPACITY_SMOOTH_TIME	30
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
+/*[Arima5908][42699][bozhi_lin] 20140814 end*/
+
+/*[Arima5908][46880][bozhi_lin] QCT CR#720880 to add error handling code to abort the current SOC calculation if a read fails 20141210 begin*/
+//https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/drivers/power/qpnp-bms.c?h=msm-3.10&id=3b20e970cdd6a31dc7ee700b4b74d0c8cb0f829a
+#define CR_FIXED_720880
+/*[Arima5908][46880][bozhi_lin] 20141210 end*/
 
 enum {
 	SHDW_CC,
@@ -286,6 +312,14 @@ struct qpnp_bms_chip {
 	struct qpnp_vadc_chip		*vadc_dev;
 	struct qpnp_iadc_chip		*iadc_dev;
 	struct qpnp_adc_tm_chip		*adc_tm_dev;
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+	bool			last_is_charging;
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
 };
 
 static struct of_device_id qpnp_bms_match_table[] = {
@@ -427,6 +461,16 @@ static int lock_output_data(struct qpnp_bms_chip *chip)
 		pr_err("couldnt lock bms output rc = %d\n", rc);
 		return rc;
 	}
+/*[Arima5908][46880][bozhi_lin] QCT CR#720880 to add error handling code to abort the current SOC calculation if a read fails 20141210 begin*/
+#if defined(CR_FIXED_720880)
+	/*
+	 * Sleep for at least 60 microseconds here to make sure there has
+	 * been at least two cycles of the sleep clock so that the registers
+	 * are correctly locked.
+	 */
+	usleep_range(60, 2000);
+#endif
+/*[Arima5908][46880][bozhi_lin] 20141210 end*/
 	return 0;
 }
 
@@ -866,6 +910,31 @@ static bool is_batfet_closed(struct qpnp_bms_chip *chip)
 	return true;
 }
 
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+static bool is_battery_maintain(struct qpnp_bms_chip *chip)
+{
+	union power_supply_propval ret = {0,};
+
+	if (chip->batt_psy == NULL)
+		chip->batt_psy = power_supply_get_by_name("battery");
+	if (chip->batt_psy) {
+		/* if battery has been registered, use the online property */
+		chip->batt_psy->get_property(chip->batt_psy,
+					POWER_SUPPLY_PROP_IS_MAINTAIN, &ret);
+		return !!ret.intval;
+	}
+
+	/* Default to true if the battery power supply is not registered. */
+	pr_debug("battery power supply is not registered\n");
+	return false;
+}
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
+
 static int get_simultaneous_batt_v_and_i(struct qpnp_bms_chip *chip,
 					int *ibat_ua, int *vbat_uv)
 {
@@ -1052,7 +1121,13 @@ static int read_soc_params_raw(struct qpnp_bms_chip *chip,
 	}
 
 	rc = read_cc_raw(chip, &raw->cc, CC);
+/*[Arima5908][46880][bozhi_lin] QCT CR#720880 to add error handling code to abort the current SOC calculation if a read fails 20141210 begin*/
+#if defined(CR_FIXED_720880)	
+	rc |= read_cc_raw(chip, &raw->shdw_cc, SHDW_CC);
+#else	
 	rc = read_cc_raw(chip, &raw->shdw_cc, SHDW_CC);
+#endif
+/*[Arima5908][46880][bozhi_lin] 20141210 end*/
 	if (rc) {
 		pr_err("Failed to read raw cc data, rc = %d\n", rc);
 		goto param_err;
@@ -1769,6 +1844,16 @@ static int report_voltage_based_soc(struct qpnp_bms_chip *chip)
 #define MAX_CATCHUP_SOC	(SOC_CATCHUP_SEC_MAX / SOC_CATCHUP_SEC_PER_PERCENT)
 #define SOC_CHANGE_PER_SEC		5
 #define REPORT_SOC_WAIT_MS		10000
+/*[Arima5908][40975][bozhi_lin] disable first boot-up to do voltage mapping capacity 20140710 begin*/
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+static bool first_boot = false;
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
+/*[Arima5908][40975][bozhi_lin] 20140710 end  */
 static int report_cc_based_soc(struct qpnp_bms_chip *chip)
 {
 	int soc, soc_change;
@@ -1779,6 +1864,14 @@ static int report_cc_based_soc(struct qpnp_bms_chip *chip)
 	int batt_temp;
 	int rc;
 	bool charging, charging_since_last_report;
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+	int pc, vbatt;
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
 
 	rc = wait_event_interruptible_timeout(chip->bms_wait_queue,
 			chip->calculated_soc != -EINVAL,
@@ -1805,6 +1898,21 @@ static int report_cc_based_soc(struct qpnp_bms_chip *chip)
 
 	mutex_lock(&chip->last_soc_mutex);
 	soc = chip->calculated_soc;
+	
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+	get_battery_voltage(chip, &vbatt);
+	pc = interpolate_pc(chip->pc_temp_ocv_lut, 25, vbatt / 1000);
+	if (first_boot) {
+		soc = pc;
+		first_boot = false;
+		pr_debug("based on voltage boot up soc = %d\n", soc);
+	}
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
 
 	last_change_sec = chip->last_soc_change_sec;
 	calculate_delta_time(&last_change_sec, &time_since_last_change_sec);
@@ -1812,6 +1920,48 @@ static int report_cc_based_soc(struct qpnp_bms_chip *chip)
 	charging = is_battery_charging(chip);
 	charging_since_last_report = charging || (chip->last_soc_unbound
 			&& chip->was_charging_at_sleep);
+
+/*[Arima5880][46993][bozhi_lin] battery level is show abnormal when battery voltage is low 20141217 begin*/
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+	if (is_battery_maintain(chip)) {
+		soc = 100;
+		get_current_time(&last_change_sec);
+		calculate_delta_time(&last_change_sec, &time_since_last_change_sec);
+		chip->last_soc_change_sec = last_change_sec;
+	}
+	else {
+		if (!charging) {
+			pr_debug("pc = %d, soc = %d\n", pc, soc);
+			if ( pc > soc) {
+				soc = pc;
+			}
+		}
+		
+		if (!charging && chip->last_is_charging) {
+			soc = chip->last_soc;
+		}
+	}
+
+	if (chip->last_is_charging ^ charging) {
+		get_current_time(&last_change_sec);
+		chip->last_soc_change_sec = last_change_sec;
+		calculate_delta_time(&last_change_sec, &time_since_last_change_sec);
+	}
+	
+	if (charging) {
+		chip->last_is_charging = true;
+	}
+	else {
+		chip->last_is_charging = false;
+	}
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
+/*[Arima5880][46993][bozhi_lin] 20141217 end*/
+			
 	/*
 	 * account for charge time - limit it to SOC_CATCHUP_SEC to
 	 * avoid overflows when charging continues for extended periods
@@ -1874,10 +2024,56 @@ static int report_cc_based_soc(struct qpnp_bms_chip *chip)
 			soc_change = min(1, soc_change);
 		}
 
+/*[Arima5880][46993][bozhi_lin] battery level is show abnormal when battery voltage is low 20141217 begin*/
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+		if (soc < chip->last_soc) {
+			if (!charging) {
+				soc = chip->last_soc - soc_change;
+			}
+			else {
+				soc = chip->last_soc;
+			}
+		}
+		if (soc > chip->last_soc) {
+			if (charging) {
+				soc = chip->last_soc + soc_change;
+			}
+			else {
+				soc = chip->last_soc;
+			}
+		}
+#else			
 		if (soc < chip->last_soc && soc != 0)
 			soc = chip->last_soc - soc_change;
 		if (soc > chip->last_soc && soc != 100)
 			soc = chip->last_soc + soc_change;
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
+/*[Arima5880][46993][bozhi_lin] 20141217 end*/
+
+/*[Arima5908][42699][bozhi_lin] set smooth time to 30 seconds when battery capacity is low 20140814 begin*/
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+		if ( soc > LOW_CAPACITY) {
+			if (time_since_last_change_sec <= CAPACITY_SMOOTH_TIME) {
+				soc = chip->last_soc;
+			}
+		}
+		else {
+			if (time_since_last_change_sec <= LOW_CAPACITY_SMOOTH_TIME) {
+				soc = chip->last_soc;
+			}
+		}
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
+/*[Arima5908][42699][bozhi_lin] 20140814 end*/
 	}
 
 	if (chip->last_soc != soc && !chip->last_soc_unbound)
@@ -1886,6 +2082,20 @@ static int report_cc_based_soc(struct qpnp_bms_chip *chip)
 	pr_debug("last_soc = %d, calculated_soc = %d, soc = %d, time since last change = %d\n",
 			chip->last_soc, chip->calculated_soc,
 			soc, time_since_last_change_sec);
+			
+/*[Arima5908][39939][bozhi_lin] implement battery capacity smooth mechanism for fine tune user feeling 20140620 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+	if ((chip->last_soc != -EINVAL) && (soc != chip->last_soc) && (time_since_last_change_sec > CAPACITY_SMOOTH_TIME)) {
+		if (chip->bms_psy_registered) {
+			power_supply_changed(&chip->bms_psy);
+		}
+	}
+#endif
+/*[Arima5908][39939][bozhi_lin] 20140620 end  */
+	
 	chip->last_soc = bound_soc(soc);
 	backup_soc_and_iavg(chip, batt_temp, chip->last_soc);
 	pr_debug("Reported SOC = %d\n", chip->last_soc);
@@ -2544,7 +2754,18 @@ static int recalculate_raw_soc(struct qpnp_bms_chip *chip)
 			batt_temp = (int)result.physical;
 
 			mutex_lock(&chip->last_ocv_uv_mutex);
+/*[Arima5908][46880][bozhi_lin] QCT CR#720880 to add error handling code to abort the current SOC calculation if a read fails 20141210 begin*/
+#if defined(CR_FIXED_720880)
+			rc = read_soc_params_raw(chip, &raw, batt_temp);
+			if (rc) {
+				pr_err("Unable to read params, rc: %d\n", rc);
+				soc = 0;
+				goto done;
+			}
+#else
 			read_soc_params_raw(chip, &raw, batt_temp);
+#endif
+/*[Arima5908][46880][bozhi_lin] 20141210 end*/
 			calculate_soc_params(chip, &raw, &params, batt_temp);
 			if (!is_battery_present(chip)) {
 				pr_debug("battery gone\n");
@@ -2558,6 +2779,11 @@ static int recalculate_raw_soc(struct qpnp_bms_chip *chip)
 				soc = calculate_raw_soc(chip, &raw,
 							&params, batt_temp);
 			}
+/*[Arima5908][46880][bozhi_lin] QCT CR#720880 to add error handling code to abort the current SOC calculation if a read fails 20141210 begin*/
+#if defined(CR_FIXED_720880)
+done:
+#endif
+/*[Arima5908][46880][bozhi_lin] 20141210 end*/
 			mutex_unlock(&chip->last_ocv_uv_mutex);
 		}
 	}
@@ -2596,8 +2822,21 @@ static int recalculate_soc(struct qpnp_bms_chip *chip)
 			batt_temp = (int)result.physical;
 
 			mutex_lock(&chip->last_ocv_uv_mutex);
+/*[Arima5908][46880][bozhi_lin] QCT CR#720880 to add error handling code to abort the current SOC calculation if a read fails 20141210 begin*/
+#if defined(CR_FIXED_720880)
+			rc = read_soc_params_raw(chip, &raw, batt_temp);
+			if (rc) {
+				pr_err("Unable to read params, rc: %d\n", rc);
+				soc = chip->calculated_soc;
+			} else {
+				soc = calculate_state_of_charge(chip,
+						&raw, batt_temp);
+			}
+#else
 			read_soc_params_raw(chip, &raw, batt_temp);
 			soc = calculate_state_of_charge(chip, &raw, batt_temp);
+#endif
+/*[Arima5908][46880][bozhi_lin] 20141210 end*/
 			mutex_unlock(&chip->last_ocv_uv_mutex);
 		}
 	}
@@ -4310,11 +4549,13 @@ static int __devinit qpnp_bms_probe(struct spmi_device *spmi)
 		goto error_setup;
 	}
 
+	/*[Arima5911][34103][bozhi_lin] fix EOC cause IRQ Unbalanced enable 20140220 begin*/
 	rc = bms_request_irqs(chip);
 	if (rc) {
 		pr_err("error requesting bms irqs, rc = %d\n", rc);
 		goto error_setup;
 	}
+	/*[Arima5911][34103][bozhi_lin] 20140220 end  */
 
 	battery_insertion_check(chip);
 	batfet_status_check(chip);
@@ -4348,6 +4589,16 @@ static int __devinit qpnp_bms_probe(struct spmi_device *spmi)
 						VBAT_SNS, rc);
 		goto unregister_dc;
 	}
+
+	/*[Arima5911][34103][bozhi_lin] fix EOC cause IRQ Unbalanced enable 20140220 begin*/
+	#if 0
+	rc = bms_request_irqs(chip);
+	if (rc) {
+		pr_err("error requesting bms irqs, rc = %d\n", rc);
+		goto unregister_dc;
+	}
+	#endif	
+	/*[Arima5911][34103][bozhi_lin] 20140220 end  */
 
 	pr_info("probe success: soc =%d vbatt = %d ocv = %d r_sense_uohm = %u warm_reset = %d\n",
 			get_prop_bms_capacity(chip), vbatt, chip->last_ocv_uv,

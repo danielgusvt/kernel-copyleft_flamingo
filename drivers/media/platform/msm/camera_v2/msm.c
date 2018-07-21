@@ -711,8 +711,19 @@ int msm_post_event(struct v4l2_event *event, int timeout)
 
 	if (timeout < 0) {
 		mutex_unlock(&session->lock);
+		//[Camera][kent][01Begin] add log information for take_picture failed
+#if 0
 		pr_err("%s : timeout cannot be negative Line %d\n",
 				__func__, __LINE__);
+#else
+		{
+			struct msm_v4l2_event_data *event_data =
+		 	(struct msm_v4l2_event_data *)&event->u.data[0];
+			pr_err("%s : cmd:0x%x timeout cannot be negative Line %d\n",
+		 	__func__, event_data->command, __LINE__);
+		}
+#endif
+		//[Camera][kent][01Begin] add log information for take_picture failed
 		return rc;
 	}
 

@@ -211,6 +211,10 @@ obj-y	+= davinci/
 
 obj-$(CONFIG_ARCH_OMAP)	+= omap/
 
+# [Arima5908][33614][bozhi_lin] NMI326 dtv function porting 20140207 begin
+obj-$(CONFIG_ISDBT_NMI)	+= nmi/nm32x/
+# [Arima5908][33614][bozhi_lin] 20140207 end
+
 ccflags-y += -I$(srctree)/drivers/media/dvb/dvb-core
 ccflags-y += -I$(srctree)/drivers/media/dvb/frontends
 ccflags-y += -I$(srctree)/drivers/media/common/tuners

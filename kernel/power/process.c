@@ -74,6 +74,16 @@ static int try_to_freeze_tasks(bool user_only)
 		if (!todo || time_after(jiffies, end_time))
 			break;
 
+/*[Arima5908][45423][bozhi_lin] roll back WI42923 will cause suspend too long 20141020 begin*/
+/*[Arima5908][42923][bozhi_lin] wait a while to prevent kworker block suspend process 20140820 begin*/
+#if 0
+		if (pm_wakeup_pending() && !strncmp(current->comm, "kworker", 7)) {
+			msleep(1);
+		}
+#endif
+/*[Arima5908][42923][bozhi_lin] 20140820 end*/
+/*[Arima5908][45423][bozhi_lin] 20141020 end*/
+
 		if (pm_wakeup_pending()) {
 			wakeup = true;
 			break;
@@ -101,9 +111,27 @@ static int try_to_freeze_tasks(bool user_only)
 			printk("\n");
 			printk(KERN_ERR "Freezing of %s aborted\n",
 					user_only ? "user space " : "tasks ");
+/*[Arima5908][42923][bozhi_lin] wait a while to prevent kworker block suspend process 20140820 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+			printk(KERN_ERR "[B]%s(%d): Process %s[%d]\n", __func__, __LINE__,
+					current->comm, task_pid_nr(current));
+#endif
+/*[Arima5908][42923][bozhi_lin] 20140820 end*/
 		}
 		else {
 			printk("\n");
+/*[Arima5908][45423][bozhi_lin] roll back WI42923 will cause suspend too long 20141020 begin*/
+#if ( (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8226SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8226SS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926DS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926DS) \
+   || (CONFIG_BSP_HW_V_CURRENT >= CONFIG_BSP_HW_V_8926SS_PDP2) && defined(CONFIG_BSP_HW_SKU_8926SS) )
+			printk(KERN_ERR "[B]%s(%d): Process %s[%d]\n", __func__, __LINE__,
+					current->comm, task_pid_nr(current));
+#endif
+/*[Arima5908][45423][bozhi_lin] 20141020 end*/
 			printk(KERN_ERR "Freezing of tasks %s after %d.%02d seconds "
 			       "(%d tasks refusing to freeze, wq_busy=%d):\n",
 			       wakeup ? "aborted" : "failed",
